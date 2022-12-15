@@ -1,0 +1,424 @@
+---
+title: "Drivers of Si Export in Small Watersheds"
+output: powerpoint_presentation
+date: '2022-12-07'
+reference_doc: "template-no-title.pptx"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE)
+
+library(png)
+library(grid)
+```
+
+***
+## Introduction
+
+- Chemical weathering of silicate rocks is a major control on the earth-climate system
+- Modern chemical weathering rates are poorly understood
+- Acid availability, wetness, and plant growth can all affect rates
+    - Climate change
+    - Acid Rain
+- Clean Air Act Amendments of 1990 (CAA)
+- Silicon (Si) is a product of weathering processes
+
+***
+## Question
+- What are the primary drivers in trends of Si export from small watersheds before and after the CAA?
+    - How did they change?
+    
+***
+## Macrosheds Dataset
+
+![macrosheds.org](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/ms_splash.PNG)
+***
+## Data Used
+
+- Used MS data to calculate Si loads and water yield from 3 watersheds
+    - California
+    - Colorado
+    - Vermont
+- Used DAYNET for grided precipitation
+- Used MODIS satellite for gross primary productivity
+
+***
+## Methods
+
+- Aggregated data monthly
+- Split data
+    - Pre-CAA (1988 and 1989)
+    - Pre-CAA (2011 and 2012)
+- Ran suite of models
+    - MLR
+    - Ridge GLM
+    - Random Forest
+- Compared results
+
+***
+## Variable Selection 
+
+```{r,echo=FALSE}
+library(GGally)
+library(ggplot2)
+df2<-read.csv("w3tenyear.csv")
+
+df2 = subset(df2, select = -c(1,12,15) )
+#also get rid of non-predictor columns: load and yield 
+df2=subset(df2, select = -c(3,4))
+
+#ggpairs(df2)#still too crammed to get any good info
+
+#theres high correlation for a lot of variables. lets get rid of st.deviation for these 
+df2=subset(df2, select = -c(8,10,14,15,17,18,20,21))
+df2=subset(df2, select = -c(1,7,11))
+ggcorr(df2, palette = "RdBu", label=TRUE)
+```
+
+
+
+***
+## Correlation pre CAA
+
+![Correlations Pre CAA](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/pre_pairs_2.png){#id .class width=150% height=150%}
+
+
+***
+## correlation post CAA
+
+![Correlations Post CAA](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/out/post_pairs.png){#id .class width=150% height=150%}
+
+
+
+<!-- *** -->
+<!-- ## Random forest variable selection  -->
+
+
+***
+
+## Random forest varaible selection
+
+```{r,echo=FALSE}
+library(tidyverse)
+library(tidymodels)
+library(here)
+
+data1 <- read_csv(here('out/GREEN4.csv')) %>%
+  select(wy, month, load_yield_adj, yield, pH_mean, gpp_mean, precip_mean) %>%
+  mutate(site = 'Colorado')
+data2 <- read_csv(here('out/w3.csv')) %>%
+  select(wy, month, load_yield_adj, yield, pH_mean, gpp_mean, precip_mean) %>%
+  mutate(site = 'Vermont')
+data3 <- read_csv(here('out/GSMACK.csv')) %>%
+  select(wy, month, load_yield_adj, yield, pH_mean, gpp_mean, precip_mean) %>%
+  mutate(site = 'California')
+
+data <- rbind(data1, data2, data3) %>%
+  mutate(month_adj = ifelse(month == 10, 1, 
+                            ifelse(month == 11, 2,
+                                   ifelse(month == 12, 3, 
+                                          ifelse(month == 1, 4, 
+                                                 ifelse(month == 2, 5, 
+                                                        ifelse(month == 1, 4, 
+                                                               ifelse(month == 3, 6, 
+                                                                      ifelse(month == 4, 7, 
+                                                                             ifelse(month == 5, 8, 
+                                                                                    ifelse(month == 6, 9, 
+                                                                                           ifelse(month == 7, 10, 
+                                                                                                  ifelse(month == 8, 11, 
+                                                                                                         ifelse(month == 9, 12, month)))))))))))))) %>%
+  select(-month)
+
+pre_caa <- data %>%
+  filter(wy < 1990,
+         wy > 1987) %>%
+  select(-wy)
+
+pre_caa %>%
+  select(-site) %>%
+  pairs() %>%
+  ggsave(filename = here('out/pre_pairs.png'))
+
+post_caa <- data %>%
+  filter(wy < 2013,
+         wy > 2010) %>%
+  select(-wy)
+
+post_caa %>%
+  select(-site) %>%
+  pairs()
+#ggsave(filename = here('out/post_pairs.png'))
+
+
+
+post_sample <- sample(c(TRUE, FALSE), nrow(post_caa), replace=TRUE, prob=c(0.8,0.2))
+post_train  <- post_caa[post_sample, ]
+post_test   <- post_caa[!post_sample, ]
+
+
+library(randomForest)
+set.seed(1)
+#mtry means include a certian number of variables into the trees. 9 is all variables (other load_yield_adj)
+#when mtry isn't included, only 3 varaibles are used. 
+Post=randomForest(load_yield_adj~.,data=post_train, mtry=8, importance=TRUE)
+
+#check importance of variables used. 
+varImpPlot(Post)
+
+```
+
+
+```{r,echo=FALSE}
+pre_sample <- sample(c(TRUE, FALSE), nrow(pre_caa), replace=TRUE, prob=c(0.8,0.2))
+pre_train  <- pre_caa[pre_sample, ]
+pre_test   <- pre_caa[!pre_sample, ]
+
+library(randomForest)
+set.seed(1)
+#mtry means include a certian number of variables into the trees. 9 is all variables (other load_yield_adj)
+#when mtry isn't included, only 3 varaibles are used. 
+pre=randomForest(load_yield_adj~.,data=pre_train, mtry=8, importance=TRUE)
+
+#check importance of variables used. 
+varImpPlot(pre)
+
+
+```
+
+***
+
+
+***
+## MLR 
+
+- Run the mlr one the dataset with all three site prior to the Caa to find signifiacnt variable(s) that were not site locations
+- I then did a mlr for each site location
+
+
+***
+## All three site Graph
+
+```{r}
+set.seed(445)
+
+lm_spec <- linear_reg()
+
+## all sites combined
+
+
+## all site mlr recipe
+w3_linear_rec = recipe(load_yield_adj ~ ., data = pre_caa)
+
+## all site workflow
+w3_linear_wf <- workflow() |>
+  add_model(lm_spec) |>
+  add_recipe(w3_linear_rec)
+
+## all site fit
+w3_linear_fit <- w3_linear_wf |>
+  fit(data = pre_caa)
+
+#w3_linear_fit |> tidy()
+
+## adding the predicted values to a helper data frame
+augment(w3_linear_fit, new_data = pre_caa) -> helpdf
+
+##ploting this
+helpdf %>%
+  ggplot(aes(x = .pred, y = load_yield_adj, colour = site))+
+  geom_point()+
+  labs(x = "Predicted Values based on model", y = "Real Values Produced", title = "All Three Sites")
+ggsave(filename = here('out/PRE3MLR.png'))
+```
+
+
+
+***
+
+## Colorado
+
+```{r}
+pre_caa_Co = pre_caa%>%
+  filter(site == "Colorado")%>%
+  select(-site)
+
+## CO sites combined
+
+
+## CO site mlr recipe
+w3_linear_rec_co = recipe(load_yield_adj ~ ., data = pre_caa_Co)
+
+## CO site workflow
+w3_linear_wf_co <- workflow() |>
+  add_model(lm_spec) |>
+  add_recipe(w3_linear_rec_co)
+
+## CO site fit
+w3_linear_fit_co <- w3_linear_wf_co |>
+  fit(data = pre_caa_Co)
+
+#w3_linear_fit_co |> tidy()
+
+## adding the predicted values to a helper data frame
+augment(w3_linear_fit_co, new_data = pre_caa_Co) -> helpdf
+
+##ploting this
+helpdf %>%
+  ggplot(aes(x = .pred, y = load_yield_adj))+
+  geom_point()+
+  labs(x = "Predicted Values based on model", y = "Real Values Produced", title = "Colorado")
+ggsave(filename = here('out/PRECoMLR.png'))
+```
+
+
+
+***
+
+## Vermont
+
+```{r}
+pre_caa_Vt = pre_caa%>%
+  filter(site == "Vermont")%>%
+  select(-site)
+
+## VT sites combined
+
+
+## VT site mlr recipe
+w3_linear_rec_vt = recipe(load_yield_adj ~ ., data = pre_caa_Vt)
+
+## VT site workflow
+w3_linear_wf_vt <- workflow() |>
+  add_model(lm_spec) |>
+  add_recipe(w3_linear_rec_vt)
+
+## VT site fit
+w3_linear_fit_vt <- w3_linear_wf_vt |>
+  fit(data = pre_caa_Vt)
+
+#w3_linear_fit_vt |> tidy()
+
+## adding the predicted values to a helper data frame
+augment(w3_linear_fit_vt, new_data = pre_caa_Vt) -> helpdf
+
+##ploting this
+helpdf %>%
+  ggplot(aes(x = .pred, y = load_yield_adj, colour = pH_mean))+
+  geom_point()+
+  labs(x = "Predicted Values based on model", y = "Real Values Produced", title = "Vermont")
+ggsave(filename = here('out/PREVtMLR.png'))
+```
+
+***
+
+## California
+```{r}
+pre_caa_Ca = pre_caa%>%
+  filter(site == "California")%>%
+  select(-site)
+
+## CA sites combined
+
+
+## CA site mlr recipe
+w3_linear_rec_ca = recipe(load_yield_adj ~ ., data = pre_caa_Ca)
+
+## CA site workflow
+w3_linear_wf_ca <- workflow() |>
+  add_model(lm_spec) |>
+  add_recipe(w3_linear_rec_ca)
+
+## CA site fit
+w3_linear_fit_ca <- w3_linear_wf_ca |>
+  fit(data = pre_caa_Ca)
+
+#w3_linear_fit_ca |> tidy()
+
+## adding the predicted values to a helper data frame
+augment(w3_linear_fit_ca, new_data = pre_caa_Ca) -> helpdf
+
+##ploting this
+helpdf %>%
+  ggplot(aes(x = .pred, y = load_yield_adj, colour = yield))+
+  geom_point()+
+  labs(x = "Predicted Values based on model", y = "Real Values Produced", title = "California")
+ggsave(filename = here('out/PRECaMLR.png'))
+```
+
+
+
+***
+## MLR Conclusions
+
+- The only significant variable in the combined site data set was pH_mean
+- Each of the sites had differnt Significant variables
+     - Colorado did not have any significant predictors
+     - Vermont had ph_mean
+     - California had total yield
+
+
+***
+## Ridge Regression
+
+- Normalized data
+- Added dummy variables for site effects
+- Tuned lambda
+- Used tuned lambda to estimate coefficients
+
+***
+##
+![ ](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/out/ridge_lambda_test_pre.png){#id .class width=150% height=150%}
+***
+
+![Pre CAA: RMSE response to different values for lambda.](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/out/ridge_tune_pre.png){#id .class width=150% height=150%}
+
+***
+
+![ ](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/out/ridge_lambda_test_post.png){#id .class width=150% height=150%}
+
+***
+
+![Post CAA: RMSE response to different values for lambda.](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/out/ridge_tune_post.png){#id .class width=150% height=150%}
+
+***
+![ ](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/out/ridge_cv_plot_pre.png){#id .class width=150% height=150%}
+
+***
+
+![ ](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/out/ridge_cv_plot_post.png){#id .class width=150% height=150%}
+
+***
+
+![ ](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/out/ridge_estimates_table_comparison.png){#id .class width=150% height=150%}
+
+***
+## Conclusions From Ridge Regression
+
+- The models described the data well (although maybe over-fitted)
+- Both Pre and Post had R-squared values of ~0.97
+- Change in Precipitation term sign indicates change in role of rain
+
+***
+## Random forest
+
+Bagging
+- Pre_caa: RMSE: 72933232
+- Post_caa: RMSE:  7196922
+
+Gradient boosting
+- Pre_caa: RMSE: 6476.693, R squared: 0.975
+- post_caa: RMSE: 6667.378, R squared:  0.929 
+
+![ ](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/pre_gbmplot.png)
+![ ](/data/accounts/fa22/lukewhite/DSCI445/Final-Project/post_gbm.png)
+
+***
+## Conclusions
+
+- All models showed evidence of the CAA changing the role of precipitation in weathering
+- Random forest with bagging and boosting gave the most robust model
+- We should probably keep regulating air quality in the US
+
