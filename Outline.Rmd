@@ -96,10 +96,11 @@ ggplot(na.omit(Esophageal_Dataset[, c("alcohol_history_documented", "person_neop
   theme_minimal()
 
 
+
 ```
 
 
-
+test
 
 
 
