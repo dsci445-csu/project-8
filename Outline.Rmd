@@ -1,0 +1,106 @@
+---
+title: "Outline"
+author: "Paige Galvan, Neha Deshpande, and Witlie Leslie"
+output: pdf_document
+date: "2024-11-12"
+---
+
+## Questions/Big Ideas:
+
+Does location/gender/age affect the after health recovery?
+
+
+
+```{r}
+# Data 
+
+data <- 'Esophageal_Dataset.csv'
+data <- read.csv(data)
+summary(data)
+
+```
+
+## 1st Step 
+Go through play w the data 
+clean data 
+
+
+Variables we like: 
+main - cancer outcome: primary_pathology_karnofsky_performance_score & primary_pathology_eastern_cancer_oncology_group
+
+
+three subsets:
+- demographics (gender, height, weight, country origin, race)
+- lifestyle
+- medical
+
+## Demographics 
+```{r}
+
+demogrpahics_data <- dplyr::select(data,
+                                   gender,
+                                   country_of_birth,
+                                   race_list,
+                                   height, 
+                                   weight)
+demogrpahics_data <- na.omit(demogrpahics_data)
+
+cor_matrix <- cor(demogrpahics_data[, -7], use = "complete.obs")
+cor_matrix
+
+```
+
+## Medical
+```{r}
+medical_data <- data[, c("icd_o_3_site", "icd_o_3_histology", "icd_10", "vital_status", "days_to_death")]r
+```
+
+
+## Analysis Types 
+
+Lasso 
+CV
+
+```{r}
+
+Esophageal_Dataset <- read_csv("Esophageal_Dataset.csv")
+
+lifestyle_data <- dplyr::select(Esophageal_Dataset,
+                                age_began_smoking_in_years, 
+                                number_pack_years_smoked,
+                                frequency_of_alcohol_consumption, 
+                                amount_of_alcohol_consumption_per_day,
+                                height, 
+                                weight, 
+                                primary_pathology_age_at_initial_pathologic_diagnosis)
+
+lifestyle_data <- na.omit(lifestyle_data)
+cor_matrix <- cor(lifestyle_data[, -7], use = "complete.obs")
+cor_matrix
+
+corrplot(cor_matrix, method = "circle", type = "upper", tl.col = "black", tl.srt = 45)
+
+ggplot(lifestyle_data, aes(x = as.factor(frequency_of_alcohol_consumption))) +
+  geom_bar(fill = "skyblue", color = "black", alpha = 0.7) +
+  labs(title = "Frequency of Alcohol Consumption", x = "Frequency of Alcohol Consumption", y = "Count") +
+  theme_minimal()
+
+ggplot(lifestyle_data, aes(x = as.factor(age_began_smoking_in_years))) +
+  geom_bar(fill = "lightgreen", color = "black", alpha = 0.7) +
+  labs(title = "Age Began Smoking", x = "Age Began Smoking (Years)", y = "Count") +
+  theme_minimal()
+
+ggplot(na.omit(Esophageal_Dataset[, c("alcohol_history_documented", "person_neoplasm_cancer_status")]), 
+       aes(x = alcohol_history_documented, fill = person_neoplasm_cancer_status)) +
+  geom_bar(position = "fill") +
+  labs(title = "Alcohol Consumption and Esophageal Cancer Status", x = "Alcohol Consumption History", y = "Proportion", fill = "Cancer Status") +
+  theme_minimal()
+
+
+```
+
+
+
+
+
+
