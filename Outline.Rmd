@@ -4,11 +4,10 @@ author: "Paige Galvan, Neha Deshpande, and Witlie Leslie"
 output: pdf_document
 date: "2024-11-12"
 ---
-
+will my commits and pulls work?
 ## Questions/Big Ideas:
 
 Does location/gender/age affect the after health recovery?
-test this is test text
 
 
 ```{r}
