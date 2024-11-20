@@ -1,0 +1,10 @@
+---
+title: "Linearity_Normality"
+output: pdf_document
+date: "2024-11-20"
+---
+
+```{r}
+
+```
+
