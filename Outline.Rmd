@@ -10,7 +10,6 @@ date: "2024-11-12"
 Does location/gender/age affect the after health recovery?
 
 
-
 ```{r}
 # Data 
 
