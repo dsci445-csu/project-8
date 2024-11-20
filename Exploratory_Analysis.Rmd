@@ -1,0 +1,64 @@
+---
+title: "Exploratory_Analysis"
+author: "Paige Galvan, Neha Deshpande, and Witlie Leslie"
+output: pdf_document
+date: "2024-11-20"
+---
+
+## Setup
+
+```{r}
+# load necessary libraries
+library(ggplot2)
+library(GGally)
+```
+
+```{r}
+# read in data
+data <- read.csv("Esophageal_Dataset.csv")
+```
+
+## Overview
+
+### To being, we will look at the general distribution of variables relating to patients' clinical outcome
+```{r, warning=FALSE}
+
+# Karnofsky Performance Score: 
+## assesses the patient's ability to perform daily activities
+### ranges from 0 (death) to 100 (normal, no issues)
+ggplot(data = data, mapping = aes(x = primary_pathology_karnofsky_performance_score)) +
+  geom_bar()
+
+# Eastern Cooperative Oncology Group (ECOG) Performance Status: 
+## evaluates a patient's level of functioning and ability to tolerate treatment
+### ranges from 0 (fully active) to 5 (death)
+ggplot(data = data, mapping = aes(x = primary_pathology_eastern_cancer_oncology_group)) +
+  geom_bar()
+
+# Vital Status
+## denotes whether patient is alive or dead
+ggplot(data = data, mapping = aes(x = vital_status)) +
+  geom_bar()
+
+# Days to Death
+## number of days leading to patient death
+ggplot(data = data, mapping = aes(x = days_to_death)) +
+  geom_histogram(bins = 35)
+```
+
+
+
+### Next, we will visualize the relationship between certain demographic & lifestyle variables with clinical outcome variables
+```{r, warning=FALSE}
+# Visualize relationship between Age (as days since birth), Vital Status, and Karnofsky Performance Score
+ggplot(data = data, mapping = aes(x = primary_pathology_karnofsky_performance_score, y = days_to_birth, color = vital_status)) +
+  geom_point(alpha = 0.5)
+
+
+```
+```{r}
+# Variables included: tissue_source_site, days_to_birth, gender, race_list, vital_status, 
+## tobacco_smoking_history, frequency_of_alcohol_consumption
+ggpairs(data = data, columns = c(3,12,14,20,25,28,33), cardinality_threshold = NULL)
+```
+
