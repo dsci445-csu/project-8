@@ -6,5 +6,59 @@ date: "2024-11-20"
 
 ```{r}
 
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+continuous_vars <- c("age", "creatinine_phosphokinase", "ejection_fraction", 
+                     "platelets", "serum_creatinine", "serum_sodium")
+
+# Normality Test
+par(mfrow = c(2, 2)) # Set up a grid for multiple plots
+for (var in continuous_vars) {
+  
+  hist(data[[var]], main = paste("Histogram of", var), xlab = var, col = "skyblue", border = "white")
+  
+  qqnorm(data[[var]], main = paste("Q-Q Plot of", var))
+  qqline(data[[var]], col = "red")
+}
+
+for (var in continuous_vars) {
+  test <- shapiro.test(data[[var]])
+  cat("Shapiro-Wilk test for", var, ":\n")
+  print(test)
+}
+
+par(mfrow = c(2, 2)) 
+for (var in continuous_vars) {
+  plot(data[[var]], data$DEATH_EVENT, 
+       main = paste(var, "vs DEATH_EVENT"), 
+       xlab = var, ylab = "DEATH_EVENT", pch = 19, col = "blue")
+  abline(lm(data$DEATH_EVENT ~ data[[var]]), col = "red")
+}
+
+
+for (var in continuous_vars) {
+  model <- glm(DEATH_EVENT ~ data[[var]], data = data, family = binomial)
+  summary(model)
+}
+
+
+model_quad <- glm(DEATH_EVENT ~ data[[var]] + I(data[[var]]^2), family = binomial, data = data)
+summary(model_quad)
+
+
+
 ```
+
+## For all variables tested, the Shapiro-Wilk test produced p-values below 0.05, meaning none of these variables follow a normal distribution
+
+## almost all of the histograms were either skewed right or left which indicates a low level of normality. the platlets and serum sodium were the ones the were the most normally dsitributed. 
+
+## using the qq plots i can see that age, ejection, serum sodium, and platlets seem to be the most normal. the other variables were not as normal. 
+
+
+## The logistic regression results show that the predictor variables (like age or serum creatinine) are significantly linked to the likelihood of a DEATH_EVENT. The model seems to fit well, as shown by the lower residual deviance. 
+
+## adding the squared term didn't help the model much. This means the relationship between the variables (like age or creatinine levels) and the risk of death looks pretty straight-line, not curvy. So, keeping it simple with a linear model makes the most sense here.
+
+
 
