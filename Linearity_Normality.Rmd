@@ -58,7 +58,5 @@ summary(model_quad)
 
 ## The logistic regression results show that the predictor variables (like age or serum creatinine) are significantly linked to the likelihood of a DEATH_EVENT. The model seems to fit well, as shown by the lower residual deviance. 
 
-## adding the squared term didn't help the model much. This means the relationship between the variables (like age or creatinine levels) and the risk of death looks pretty straight-line, not curvy. So, keeping it simple with a linear model makes the most sense here.
-
-
+## adding the squared term didn't help the model much. This means the relationship between the variables (like age or creatinine levels) and the risk of death looks pretty straight-line, not curvy. So, keeping it simple with a linear model makes the most sense here. 
 
