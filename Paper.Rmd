@@ -17,7 +17,11 @@ assessing linearity and normality of variables
 
 #### Regularization 
 
-Lasso or Ridge regression? Investigate individual significance of variables to decide.
+Lasso or Ridge regression? 
+
+Investigate individual significance of variables -> many variables do not display significance
+
+Perform both Ridge & Lasso and compare results.
 
 #### Model creation
 
