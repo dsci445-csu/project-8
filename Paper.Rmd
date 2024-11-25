@@ -1,0 +1,32 @@
+---
+title: "DSCI 445 Project Paper"
+author: "Paige Galvan, Neha Deshpande, & Witlie Leslie"
+date: "2024-11-25"
+output: pdf_document
+---
+
+# Motivation
+
+The goal of our project is to predict mortality from heart failure using behavioral risk factor data.
+
+# Methodology
+
+#### Exploratory Analysis 
+
+assessing linearity and normality of variables
+
+#### Regularization 
+
+Lasso or Ridge regression? Investigate individual significance of variables to decide.
+
+#### Model creation
+
+
+#### Assessment
+
+
+# Results
+
+# References
+
+Davide Chicco, Giuseppe Jurman: Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. BMC Medical Informatics and Decision Making 20, 16 (2020). https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5 
