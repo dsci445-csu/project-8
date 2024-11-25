@@ -4,6 +4,31 @@ output: pdf_document
 date: "2024-11-20"
 ---
 
+To determine which regularization method would be most appropriate, will investigate significance of each predictor variable.
+
+```{r}
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+# scale continuous variables
+numeric_vars <- sapply(data, is.numeric)
+boolean_vars <- sapply(data, function(x) all(x %in% c(0,1)))
+
+need_scale <- numeric_vars & !boolean_vars
+
+data[need_scale] <- scale(data[need_scale])
+```
+
+Now check to see how many variables display significance
+
+```{r}
+# linear regression model
+lin_reg_model <- lm(DEATH_EVENT ~ ., data = data)
+
+summary(lin_reg_model)
+```
+
+It looks like there are quite a few predictors that do not display a significant correlation with the response. Ridge regression seems most appropriate. Will do both ridge regression and lasso and compare 
+
 ```{r}
 
 ```
