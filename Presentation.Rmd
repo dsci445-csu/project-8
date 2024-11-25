@@ -1,0 +1,13 @@
+---
+title: "Predicting Heart Failure from Behavioral Risk Factor Data"
+author: "Paige Galvan, Neha Deshpande, & Witlie Leslie"
+date: "2024-11-25"
+output:
+  beamer_presentation: default
+  powerpoint_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
