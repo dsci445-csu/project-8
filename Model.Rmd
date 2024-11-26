@@ -7,24 +7,240 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(caTools) 
+library(randomForest) 
+library(e1071) 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(MASS)
+library(GGally)
+library(tidymodels)
+library(ISLR)
+library(class)
+library(reshape2)
+library(pROC)
 ```
 
-## R Markdown
+```{r}
+set.seed(445)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+sum(is.na(data))
 
-```{r cars}
-summary(cars)
+data <- na.omit(data)
+
+data$DEATH_EVENT <- as.factor(data$DEATH_EVENT)
+
+scaled_data <- data
+scaled_data[, -which(names(data) == "DEATH_EVENT")] <- scale(data[, -which(names(data) == "DEATH_EVENT")])
+
+summary(scaled_data)
 ```
 
-## Including Plots
+#Support Vector Machine
 
-You can also embed plots, for example:
+```{r}
+set.seed(42)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
+train_data <- subset(scaled_data, split == TRUE)
+test_data <- subset(scaled_data, split == FALSE)
+
+svm_model <- svm(DEATH_EVENT ~ ., data = train_data, kernel = "radial", cost = 1, scale = TRUE)
+
+summary(svm_model)
+
+predictions <- predict(svm_model, test_data)
+
+conf_matrix <- table(Predicted = predictions, Actual = test_data$DEATH_EVENT)
+print(conf_matrix)
+
+accuracy <- sum(predictions == test_data$DEATH_EVENT) / length(predictions)
+print(paste("Accuracy: ", round(accuracy, 3)))
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Histograms
+
+```{r}
+
+numeric_data <- scaled_data[, sapply(scaled_data, is.numeric)]
+melted_data <- melt(numeric_data)
+
+ggplot(melted_data, aes(x = value)) + 
+  geom_histogram(bins = 30, fill = "blue", color = "black", alpha = 0.7) +
+  facet_wrap(~variable, scales = "free_x") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Numeric Features", x = "Value", y = "Frequency")
+
+```
+
+## Boxplot
+
+```{r}
+ggplot(scaled_data, aes(x = DEATH_EVENT, y = ejection_fraction)) + 
+  geom_boxplot(fill = c("blue", "red")) +
+  theme_minimal() +
+  labs(title = "Boxplot of Ejection Fraction by Death Event", x = "Death Event", y = "Ejection Fraction")
+```
+
+## SVM Model
+
+```{r}
+svm_data <- scaled_data[, c("age", "serum_creatinine", "DEATH_EVENT")]
+
+svm_model_2d <- svm(DEATH_EVENT ~ age + serum_creatinine, data = svm_data, kernel = "radial")
+
+x_range <- seq(min(svm_data$age) - 1, max(svm_data$age) + 1, length.out = 100)
+y_range <- seq(min(svm_data$serum_creatinine) - 1, max(svm_data$serum_creatinine) + 1, length.out = 100)
+grid <- expand.grid(age = x_range, serum_creatinine = y_range)
+
+predictions_grid <- predict(svm_model_2d, grid)
+
+ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
+  geom_point(alpha = 0.7, size = 3) +
+  geom_tile(data = grid, 
+            aes(x = age, y = serum_creatinine, 
+                fill = predictions_grid), 
+            alpha = 0.3) +
+  scale_fill_manual(values = c("red", "blue")) +
+  scale_color_manual(values = c("red", "blue")) +
+  theme_minimal() +
+  labs(title = "SVM Decision Boundary", x = "Age", y = "Serum Creatinine") +
+  theme(legend.position = "none")
+
+```
+
+## Confusion Matrix
+
+```{r}
+conf_matrix <- table(Predicted = predictions, Actual = test_data$DEATH_EVENT)
+
+conf_matrix_df <- as.data.frame(conf_matrix)
+
+ggplot(conf_matrix_df, aes(x = Predicted, y = Actual, fill = Freq)) + 
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "white", size = 8) +
+  scale_fill_gradient(low = "white", high = "blue") +
+  labs(title = "Confusion Matrix", x = "Predicted", y = "Actual") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 12), axis.text.y = element_text(size = 12))
+
+```
+
+## ROC Curve
+
+```{r}
+svm_probs <- attr(predict(svm_model, test_data, decision.values = TRUE), "decision.values")
+
+roc_curve <- roc(test_data$DEATH_EVENT, svm_probs)
+plot(roc_curve, col = "blue", main = "ROC Curve for SVM Model")
+
+```
+
+#Random Forest
+
+```{r}
+split <- sample.split(data, SplitRatio = 0.7) 
+split
+
+train <- subset(data, split == "TRUE") 
+test <- subset(data, split == "FALSE") 
+
+set.seed(120)  
+classifier_RF = randomForest(x = train[-5], 
+                             y = train$age, 
+                             ntree = 500)
+classifier_RF
+
+y_pred = predict(classifier_RF, newdata = test[-5])
+confusion_mtx = table(test[, 5], y_pred) 
+confusion_mtx
+
+plot(classifier_RF)
+importance(classifier_RF) 
+varImpPlot(classifier_RF)
+```
+
+```{r}
+set.seed(42)
+
+split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
+train_data <- subset(scaled_data, split == TRUE)
+test_data <- subset(scaled_data, split == FALSE)
+
+dim(train_data)
+dim(test_data)
+
+rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 3, importance = TRUE)
+
+importance(rf_model)
+
+tuned_rf <- tuneRF(train_data[, -which(names(train_data) == "DEATH_EVENT")], train_data$DEATH_EVENT, stepFactor = 1.5, improve = 0.01, trace = TRUE)
+tuned_rf
+```
+
+## Prediction\Confussion Matrix
+```{r}
+rf_predictions <- predict(rf_model, test_data)
+
+conf_matrix <- table(Predicted = rf_predictions, Actual = test_data$DEATH_EVENT)
+print(conf_matrix)
+
+accuracy <- sum(rf_predictions == test_data$DEATH_EVENT) / length(rf_predictions)
+cat("Accuracy: ", round(accuracy, 3))
+```
+
+##ROC Curve
+```{r}
+rf_probs <- predict(rf_model, test_data, type = "prob")[, 2] 
+roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
+
+plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
+```
+
+## Variable Importance Plot
+```{r}
+varImpPlot(rf_model, 
+           main = "Variable Importance Plot", 
+           type = 1,     
+           col = "blue",  
+           pch = 16)
+```
+
+## Random Forest Tree Plot
+```{r}
+library(rpart.plot)
+rpart.plot(rf_model$forest$tree[[1]], 
+           main = "Random Forest Tree", 
+           extra = 1) 
+```
+
+```{r}
+library(party)
+
+# Visualize the first tree in the Random Forest model
+# Extract the first tree from the randomForest object and convert it to a ctree object for visualization
+first_tree <- randomForest::getTree(rf_model, k = 1, labelVar = TRUE)
+
+# Use the party package to plot the tree
+ctree_first_tree <- as.party(first_tree)
+plot(ctree_first_tree, main = "First Tree from Random Forest")
+# Variable Importance Plot
+varImpPlot(rf_model, 
+           main = "Variable Importance Plot", 
+           type = 1,      # Mean Decrease Accuracy
+           col = "blue",  # Color of bars
+           pch = 16)      # Points for importance values
+
+# OOB Error Plot
+plot(rf_model, main = "OOB Error Plot")
+
+
+```
+
