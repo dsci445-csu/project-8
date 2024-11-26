@@ -1,0 +1,197 @@
+---
+title: "Regularization"
+output: pdf_document
+date: "2024-11-20"
+---
+
+To determine which regularization method would be most appropriate, will investigate significance of each predictor variable.
+
+```{r}
+set.seed(445)
+
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+# scale continuous variables
+numeric_vars <- sapply(data, is.numeric)
+boolean_vars <- sapply(data, function(x) all(x %in% c(0,1)))
+
+need_scale <- numeric_vars & !boolean_vars
+
+data[need_scale] <- scale(data[need_scale])
+```
+
+Now check to see how many variables display significance
+
+```{r}
+# linear regression model
+lin_reg_model <- lm(DEATH_EVENT ~ ., data = data)
+
+summary(lin_reg_model)
+```
+
+It looks like there are quite a few predictors that do not display a significant correlation with the response. Ridge regression seems most appropriate. Will do both ridge regression and lasso and compare 
+
+```{r}
+# Ridge regression alt way 
+
+x <- model.matrix(DEATH_EVENT ~ ., data)[, -1]
+y <- data$DEATH_EVENT
+
+ridge_model <- glmnet(x, y, alpha = 0, family = "binomial")
+
+ridge_cv <- cv.glmnet(x, y, alpha = 0, family = "binomial")
+ridge_best_lambda <- ridge_cv$lambda.min
+
+ridge_final <-glmnet(x, y, alpha = 0, lambda = ridge_best_lambda, family = "binomial")
+```
+
+```{r}
+# Lasso alt way
+
+lasso_model <- glmnet(x, y, alpha = 1, family = "binomial")
+
+lasso_cv <- cv.glmnet(x, y, alpha = 1, family = "binomial")
+lasso_best_lambda <- lasso_cv$lambda.min
+
+lasso_final <- glmnet(x, y, alpha = 1, lambda = lasso_best_lambda, family = "binomial")
+```
+
+```{r}
+library(tidymodels)
+library(tidyverse)
+library(ggplot2)
+
+# Ridge Regression
+lambda <- lambda <- 10^seq(-2, 10, length.out = 100)
+tune_df <- data.frame(lambda = lambda)
+
+prep_data <- recipe(DEATH_EVENT ~ ., data = data)
+
+ridge_ests <- data.frame()
+for(lam in lambda) {
+  ridge_spec <- linear_reg(mixture = 0, penalty = lam) |>
+    set_mode("regression") |>
+    set_engine("glmnet")
+  
+    workflow() |>
+    add_model(ridge_spec) |>
+    add_recipe(prep_data) |>
+    fit(data) |>
+    tidy() |>
+    bind_rows(ridge_ests) -> ridge_ests
+}
+
+# visualization of estimated coefficients for each lambda
+ridge_ests |>
+  filter(term != "(Intercept)") |>
+  ggplot() +
+  geom_line(aes(penalty, estimate, group = term, colour = term)) +
+  #geom_vline(xintercept = ridge_best$lambda) +
+  coord_trans(x = "log10")
+
+data_10foldcv <- vfold_cv(data, v = 10)
+
+ridge_spec <- linear_reg(mixture = 0, penalty = tune("lambda")) |>
+  set_mode("regression") |>
+  set_engine("glmnet")
+
+workflow() |>
+  add_model(ridge_spec) |>
+  add_recipe(prep_data) |>
+  tune_grid(resamples = data_10foldcv, grid = tune_df) -> ridge_tune
+
+ridge_tune |>
+  collect_metrics() |>
+  select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  geom_line(aes(lambda, rmse^2)) +
+  geom_point(aes(lambda, rmse^2)) +
+  #geom_point(aes(ridge_best$lambda, (ridge_best$mean)^2), color = "red") +
+  coord_trans(x = "log10")
+
+show_best(ridge_tune, metric = "rmse", n = 1)
+```
+
+
+
+```{r}
+# Lasso
+
+lasso_ests <- data.frame()
+for(lam in lambda) {
+  lasso_spec <- linear_reg(mixture = 1, penalty = lam) |>
+    set_mode("regression") |>
+    set_engine("glmnet")
+  
+    workflow() |>
+    add_model(lasso_spec) |>
+    add_recipe(prep_data) |>
+    fit(data) |>
+    tidy() |>
+    bind_rows(lasso_ests) -> lasso_ests
+}
+
+lasso_ests |>
+  filter(term != "(Intercept)") |>
+  ggplot() +
+  geom_line(aes(penalty, estimate, group = term, colour = term)) +
+  #geom_vline(xintercept = lasso_best$lambda) +
+  coord_trans(x = "log10")
+
+lasso_spec <- linear_reg(mixture = 1, penalty = tune("lambda")) |>
+  set_mode("regression") |>
+  set_engine("glmnet")
+
+workflow() |>
+  add_model(lasso_spec) |>
+  add_recipe(prep_data) |>
+  tune_grid(resamples = data_10foldcv, grid = tune_df) -> lasso_tune
+
+lasso_tune |>
+  collect_metrics() |>
+  select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  geom_line(aes(lambda, rmse^2)) +
+  geom_point(aes(lambda, rmse^2)) +
+  #geom_point(aes(lasso_best$lambda, (lasso_best$mean)^2), color = "red") +
+  coord_trans(x = "log10")
+
+show_best(lasso_tune, metric = "rmse", n = 1)
+```
+
+
+```{r}
+ridge_metrics <- ridge_tune |>
+  collect_metrics() |>
+  filter(.metric == "rmse") |>
+  mutate(method = "Ridge")
+
+lasso_metrics <- lasso_tune |>
+  collect_metrics() |>
+  filter(.metric == "rmse") |>
+  mutate(method = "Lasso")
+
+combined_metrics <- bind_rows(ridge_metrics, lasso_metrics)
+
+combined_metrics |>
+  ggplot(aes(x = lambda, y = mean, color = method)) +
+  geom_line() +
+  geom_point() +
+  #geom_point(aes(ridge_best$lambda, (ridge_best$mean)), color = "green") +
+  #geom_point(aes(lasso_best$lambda, (lasso_best$mean), color = "green") +
+  coord_trans(x = "log10") +
+  labs(
+    title = "Comparison of Ridge and Lasso Regression",
+    x = "Lambda (Log Scale)",
+    y = "Mean RMSE",
+    color = "Method")
+
+ridge_best <- show_best(ridge_tune, metric = "rmse", n = 1)
+print(ridge_best)
+
+lasso_best <- show_best(lasso_tune, metric = "rmse", n = 1)
+print(lasso_best)
+```
+
