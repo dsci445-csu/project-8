@@ -15,19 +15,35 @@ The goal of our project is to predict mortality from heart failure using behavio
 
 assessing linearity and normality of variables
 
-#### Regularization 
+#### Logistic Regression with Regularization
 
-Lasso or Ridge regression? 
+Logistic Regression is designed inherently for binary classification problems such as ours. 
 
-Investigate individual significance of variables -> many variables do not display significance
+1. Logistic Regression model with no regularization
 
-Perform both Ridge & Lasso and compare results.
+Does not address any potential collinearity issues or irrelevant predictors (mostly doing just to act as a reference to compare with Ridge & Lasso)
 
-#### Model creation
+2. Logistic Regression model with Ridge Regression
 
+Penalizes large coefficients, stabilizing the model. Does not get rid of any predictors. Interpretability is worse than with Lasso. Addresses collinearity & irrelevant predictors.
+
+3. Logistic Regression model with Lasso
+
+Performs feature selection by driving certain coefficients to zero. Better interpretability than Ridge. Addresses collinearity & irrelevant predictors.
+
+Analysis: Compare predictive strength of each of these 3 models and determine best
+
+#### Support Vector Machine
+
+Can handle linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships (which it seems like our data is). Does not assume any specific distribution of predictors (which is good because none of our predictors are normal) 
+
+#### Random Forest
+
+Does not assume linear or nonlinear relationship between predictors and response. Good for non-normal variables.
 
 #### Assessment
 
+Compare the results of Logistic Regression, SVM, and Random Forest
 
 # Results
 
