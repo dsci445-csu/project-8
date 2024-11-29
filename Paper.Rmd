@@ -37,6 +37,8 @@ Analysis: Compare predictive strength of each of these 3 models and determine be
 
 Can handle linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships (which it seems like our data is). Does not assume any specific distribution of predictors (which is good because none of our predictors are normal) 
 
+
+
 #### Random Forest
 
 Does not assume linear or nonlinear relationship between predictors and response. Good for non-normal variables.
