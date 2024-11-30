@@ -244,3 +244,72 @@ plot(rf_model, main = "OOB Error Plot")
 
 ```
 
+
+## I am going to do some cross validation - Neha
+
+```{r}
+library(caret)
+library(randomForest)
+library(e1071)
+
+set.seed(123)
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+data$DEATH_EVENT <- as.factor(data$DEATH_EVENT)
+scaled_data <- data
+scaled_data[, -which(names(data) == "DEATH_EVENT")] <- scale(data[, -which(names(data) == "DEATH_EVENT")])
+
+
+
+data$DEATH_EVENT <- factor(data$DEATH_EVENT, levels = c(0, 1), labels = c("No", "Yes"))
+
+scaled_data <- data
+scaled_data[, -which(names(data) == "DEATH_EVENT")] <- scale(data[, -which(names(data) == "DEATH_EVENT")])
+
+library(caret)
+control <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = twoClassSummary)
+
+set.seed(42)
+rf_model <- train(
+  DEATH_EVENT ~ ., 
+  data = scaled_data, 
+  method = "rf",
+  metric = "ROC",
+  trControl = control
+)
+
+# SVM with 5-fold Cross-Validation
+set.seed(42)
+svm_model <- train(
+  DEATH_EVENT ~ ., 
+  data = scaled_data, 
+  method = "svmRadial",
+  metric = "ROC",
+  trControl = control
+)
+
+print(rf_model)
+print(svm_model)
+
+rf_results <- rf_model$results
+svm_results <- svm_model$results
+
+results <- rbind(
+  data.frame(Model = "Random Forest", ROC = rf_model$results$ROC),
+  data.frame(Model = "SVM", ROC = svm_model$results$ROC)
+)
+
+library(ggplot2)
+ggplot(results, aes(x = Model, y = ROC, fill = Model)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Random Forest" = "blue", "SVM" = "red")) +
+  labs(
+    title = "Model ROC Comparison",
+    y = "Mean ROC (Cross-Validation)",
+    x = "Model"
+  ) +
+  theme_minimal()
+
+```
+
+## I trained two models, Random Forest and SVM, to classify the data, and compared their performance using cross-validation. The Random Forest model performed best with `mtry = 2`, giving an ROC of 0.91. It was really good at identifying true positives (91% sensitivity) but had a moderate specificity of 69%. The SVM model, tuned with `C = 0.5` and `sigma = 0.0562`, had an ROC of 0.86, a sensitivity of 86%, and a specificity of 66%. Overall, the Random Forest model performed better, especially in terms of overall accuracy and detecting positive cases.
+
