@@ -13,7 +13,12 @@ The goal of our project is to predict mortality from heart failure using behavio
 
 #### Exploratory Analysis 
 
-Before applying machine learning models, we began by performing an exploratory analysis of the data. This included assessing the linearity and normality of the predictors, identifying any outliers, and exploring potential correlations among the variables. We visualized distributions using histograms and box plots to understand the spread of each feature, and scatter plots to check the relationships between the predictor variables and the target variable (mortality). This helped us determine whether the data required transformations before applying machine learning techniques.
+Before applying machine learning models, we began by performing an exploratory analysis of the data. This 
+included assessing the linearity and normality of the predictors, identifying any outliers, and exploring 
+potential correlations among the variables. We visualized distributions using histograms and box plots to 
+understand the spread of each feature, and scatter plots to check the relationships between the predictor 
+variables and the target variable (mortality). This helped us determine whether the data required 
+transformations before applying machine learning techniques.
 
 
 assessing linearity and normality of variables
