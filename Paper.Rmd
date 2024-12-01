@@ -15,7 +15,10 @@ fraction, serum creatinine, and co-existing conditions like diabetes and high bl
 data, researchers can uncover patterns that contribute to better understanding the progression of heart
 failure.
 
-The main motivation for our group to study this dataset is to dive a little bit deeper on which factors affect heart failure. Knowing that heart failure is a leading cause of death around the world, finding meaningful patterns can inform public health strategies, such as targeted lifestyle modifications or health care campaigns. The main objective is to transform this raw data into meaningful conclusions on heart disease. 
+The main motivation for our group to study this dataset is to dive a little bit deeper on which factors affect 
+heart failure. Knowing that heart failure is a leading cause of death around the world, finding meaningful 
+patterns can inform public health strategies, such as targeted lifestyle modifications or health care 
+campaigns. The main objective is to transform this raw data into meaningful conclusions on heart disease. 
 
 # Methodology
 
