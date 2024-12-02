@@ -44,6 +44,11 @@ less interpretable than Lasso. Finally, we used Lasso regularization, which not 
 predictive power helps determine which approach balances accuracy and simplicity best.
 
 
+
+## Linearity and Normality 
+
+
+
 #### Support Vector Machine
 
 Can handle linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships (which it seems like our data is). Does not assume any specific distribution of predictors (which is good because none of our predictors are normal) 
