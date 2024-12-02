@@ -7,31 +7,50 @@ output: pdf_document
 
 # Motivation
 
-The goal of our project is to predict mortality from heart failure using behavioral risk factor data.
+The goal of our project is to predict mortality from heart failure using behavioral risk factor data. Heart 
+failure is a disease that affects millions of people yearly. Although modern medicine has improved, it can 
+be hard to determine causes of heart failure due to how many variables can affect it. The Heart Failure 
+Clinical Records Dataset provides a collection of medical indicators such as age, ejection 
+fraction, serum creatinine, and co-existing conditions like diabetes and high blood pressure. By analyzing this
+data, researchers can uncover patterns that contribute to better understanding the progression of heart
+failure.
+
+The main motivation for our group to study this dataset is to dive a little bit deeper into which factors affect 
+heart failure. Knowing that heart failure is a leading cause of death around the world, finding meaningful 
+patterns can inform public health strategies, such as targeted lifestyle modifications or health care 
+campaigns. The main objective is to transform this raw data into meaningful conclusions on heart disease. 
 
 # Methodology
 
 #### Exploratory Analysis 
 
-assessing linearity and normality of variables
+Before applying machine learning models, we began by performing an exploratory analysis of the data. This 
+included assessing the linearity and normality of the predictors, identifying any outliers, and exploring 
+potential correlations among the variables. We visualized distributions using histograms and box plots to 
+understand the spread of each feature, and scatter plots to check the relationships between the predictor 
+variables and the target variable (mortality). This helped us determine whether the data required 
+transformations before applying machine learning techniques.
+
+
 
 #### Logistic Regression with Regularization
 
-Logistic Regression is designed inherently for binary classification problems such as ours. 
 
-1. Logistic Regression model with no regularization
+Logistic regression is a go-to method for binary classification, and we explored three versions to analyze 
+predictive performance. First, we fit a basic logistic regression model without regularization as a baseline. 
+While simple, it doesn't handle collinearity or irrelevant predictors. Next, we applied Ridge regression regularization, 
+which penalizes large coefficients to stabilize the model, though it doesn't eliminate predictors, making it 
+less interpretable than Lasso. Finally, we used Lasso regularization, which not only penalizes coefficients, but also performs feature selection by shrinking some to zero, improving interpretability. Comparing their 
+predictive power helps determine which approach balances accuracy and simplicity best.
 
-Does not address any potential collinearity issues or irrelevant predictors (mostly doing just to act as a reference to compare with Ridge & Lasso)
+```{r, include=FALSE}
+set.seed(445)
 
-2. Logistic Regression model with Ridge Regression
+library(tidymodels)
+library(tidyverse)
+library(ggplot2)
+```
 
-Penalizes large coefficients, stabilizing the model. Does not get rid of any predictors. Interpretability is worse than with Lasso. Addresses collinearity & irrelevant predictors.
-
-3. Logistic Regression model with Lasso
-
-Performs feature selection by driving certain coefficients to zero. Better interpretability than Ridge. Addresses collinearity & irrelevant predictors.
-
-Analysis: Compare predictive strength of each of these 3 models and determine best
 
 #### Support Vector Machine
 
