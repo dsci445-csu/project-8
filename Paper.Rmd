@@ -35,6 +35,9 @@ Analysis: Compare predictive strength of each of these 3 models and determine be
 
 #### Support Vector Machine
 
+
+Support Vector Machines (SVMs) are primarily binary classifiers. When dealing with more than two classes, SVMs can handle multi-class classification by applying techniques like "one-vs-one" or "one-vs-all," where multiple binary classifications are combined. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries.
+
 Can handle linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships (which it seems like our data is). Does not assume any specific distribution of predictors (which is good because none of our predictors are normal) 
 
 
