@@ -1,5 +1,5 @@
 ---
-title: "Regularization"
+title: "Logistic Regression & Regularization"
 output: pdf_document
 date: "2024-11-20"
 ---
@@ -18,18 +18,44 @@ need_scale <- numeric_vars & !boolean_vars
 data[need_scale] <- scale(data[need_scale])
 ```
 
-## Logisitic Regression with No Regularization
+## Logistic Regression with No Regularization
 ```{r}
 # convert DEATH_EVENT to a factor 
 data <- data %>%
-  mutate(DEATH_EVENT = as.factor(DEATH_EVENT))
+  mutate(DEATH_EVENT = factor(DEATH_EVENT, levels = c("0", "1")))
 
-log_reg_model <- glm(DEATH_EVENT ~ ., data = data, family = binomial)
+# split data into training set (80%) and test set (20%)
+data_split <- initial_split(data, prop = 0.8)
+train_data <- training(data_split)
+test_data <- testing(data_split)
 
-summary(log_reg_model)
+prep_data <- recipe(DEATH_EVENT ~ ., data = train_data)
+
+# fit logistic regression model
+logistic_spec <- logistic_reg(penalty = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+final_logistic_workflow <- workflow() %>%
+  add_model(logistic_spec) %>%
+  add_recipe(prep_data)
+
+final_logistic_model <- fit(final_logistic_workflow, data = train_data)
+
+# evaluate logistic model on test set
+logistic_predictions <- predict(final_logistic_model, test_data, type = "prob") %>%
+  bind_cols(test_data) %>%
+  # creating pred_class column by converting probabilities into class predictions
+  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+
+logistic_metrics <- roc_auc(logistic_predictions, truth = DEATH_EVENT, .pred_1) %>%
+  bind_rows(accuracy(logistic_predictions, truth = DEATH_EVENT, .pred_class))
+
+# print logistic model metrics
+print(logistic_metrics)
 ```
 
-It looks like there are quite a few predictors that do not display a significant correlation with the response. Ridge regression seems most appropriate. Will do both ridge regression and lasso and compare 
+The logistic regression model with no regularization has a roc_auc of 0.133 and an accuracy of 0.833. 
 
 ## Ridge Regression
 ```{r}
@@ -64,10 +90,9 @@ ridge_ests |>
   filter(term != "(Intercept)") |>
   ggplot() +
   geom_line(aes(penalty, estimate, group = term, colour = term)) +
-  #geom_vline(xintercept = ridge_best$lambda) +
   coord_trans(x = "log10")
 
-# perform 10-fold cross validation, estimate test MSE for each lambda
+# perform 10-fold cross validation, estimate roc_auc for each lambda
 data_10foldcv <- vfold_cv(data, v = 10)
 
 ridge_spec <- logistic_reg(mixture = 0, penalty = tune("lambda")) |>
@@ -86,7 +111,6 @@ ridge_tune |>
   ggplot() +
   geom_line(aes(lambda, roc_auc)) + 
   geom_point(aes(lambda, roc_auc)) +
-  #geom_point(aes(ridge_best$lambda, (ridge_best$mean)^2), color = "red") +
   coord_trans(x = "log10")
 
 # determine best lambda
@@ -112,13 +136,14 @@ for(lam in lambda) {
     bind_rows(lasso_ests) -> lasso_ests
 }
 
+# visualize estimated coefficients for each lambda
 lasso_ests |>
   filter(term != "(Intercept)") |>
   ggplot() +
   geom_line(aes(penalty, estimate, group = term, colour = term)) +
-  #geom_vline(xintercept = lasso_best$lambda) +
   coord_trans(x = "log10")
 
+# perform 10-fold cross validation, estimate roc_auc for each lambda
 lasso_spec <- logistic_reg(mixture = 1, penalty = tune("lambda")) |>
   set_mode("classification") |>
   set_engine("glmnet")
@@ -135,12 +160,10 @@ lasso_tune |>
   ggplot() +
   geom_line(aes(lambda, roc_auc)) +
   geom_point(aes(lambda, roc_auc)) +
-  #geom_point(aes(lasso_best$lambda, (lasso_best$mean)^2), color = "red") +
   coord_trans(x = "log10")
 
 show_best(lasso_tune, metric = "roc_auc", n = 1)
 ```
-
 
 ```{r}
 ridge_metrics <- ridge_tune |>
@@ -159,8 +182,6 @@ combined_metrics |>
   ggplot(aes(x = lambda, y = mean, color = method)) +
   geom_line() +
   geom_point() +
-  #geom_point(aes(ridge_best$lambda, (ridge_best$mean)), color = "green") +
-  #geom_point(aes(lasso_best$lambda, (lasso_best$mean), color = "green") +
   coord_trans(x = "log10") +
   labs(
     title = "Comparison of Ridge and Lasso Regression",
@@ -174,4 +195,84 @@ print(ridge_best)
 lasso_best <- show_best(lasso_tune, metric = "roc_auc", n = 1)
 print(lasso_best)
 ```
+```{r, warning=FALSE}
+# show best lambda with ridge regression
+ridge_tune |>
+  collect_metrics() |>
+  select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  geom_line(aes(lambda, roc_auc)) + 
+  geom_point(aes(lambda, roc_auc)) +
+  geom_point(aes(ridge_best$lambda, ridge_best$mean), color = "red") +
+  coord_trans(x = "log10")
 
+# show best lmabda with lasso
+lasso_tune |>
+  collect_metrics() |>
+  select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  geom_line(aes(lambda, roc_auc)) +
+  geom_point(aes(lambda, roc_auc)) +
+  geom_point(aes(lasso_best$lambda, lasso_best$mean), color = "red") +
+  coord_trans(x = "log10")
+```
+
+
+## Fit Logistic Models
+```{r}
+# finalize ridge with best lambda
+best_ridge_lambda <- show_best(ridge_tune, metric = "roc_auc", n = 1)$lambda
+
+final_ridge_spec <- logistic_reg(penalty = best_ridge_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+final_ridge_workflow <- workflow() %>%
+  add_model(final_ridge_spec) %>%
+  add_recipe(prep_data)
+
+final_ridge_model <- fit(final_ridge_workflow, data = train_data)
+
+# finalize lasso with best lambda
+best_lasso_lambda <- show_best(lasso_tune, metric = "roc_auc", n = 1)$lambda
+
+final_lasso_spec <- logistic_reg(penalty = best_lasso_lambda, mixture = 1) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+final_lasso_workflow <- workflow() %>%
+  add_model(final_lasso_spec) %>%
+  add_recipe(prep_data)
+
+final_lasso_model <- fit(final_lasso_workflow, data = train_data)
+```
+
+## Evaluate Performance
+```{r}
+# evaluate ridge model on test set
+ridge_predictions <- predict(final_ridge_model, test_data, type = "prob") %>%
+  bind_cols(test_data) %>%
+  # creating pred_class column by converting probabilities into class predictions
+  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+
+ridge_metrics <- roc_auc(ridge_predictions, truth = DEATH_EVENT, .pred_1) %>%
+  bind_rows(accuracy(ridge_predictions, truth = DEATH_EVENT, .pred_class))
+
+# evaluate lasso model on test set
+lasso_predictions <- predict(final_lasso_model, test_data, type = "prob") %>%
+  bind_cols(test_data) %>%
+  # creating pred_class column by converting probabilities into class predictions
+  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+
+lasso_metrics <- roc_auc(lasso_predictions, truth = DEATH_EVENT, .pred_1) %>%
+  bind_rows(accuracy(lasso_predictions, truth = DEATH_EVENT, .pred_class))
+
+# print ridge model metrics
+print(ridge_metrics)
+
+# print lasso model metrics
+print(lasso_metrics)
+```
+Ridge regression model has a higher roc_auc of 0.137, but a lower accuracy of 0.833 compared to the Lasso model with a roc_auc of 0.103 and accuracy of 0.850. All of these values are very similar to that of the logistic model with no regularization.
