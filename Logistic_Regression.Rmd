@@ -3,9 +3,7 @@ title: "Regularization"
 output: pdf_document
 date: "2024-11-20"
 ---
-
-To determine which regularization method would be most appropriate, will investigate significance of each predictor variable.
-
+## Standardize Data 
 ```{r}
 set.seed(445)
 
@@ -20,57 +18,37 @@ need_scale <- numeric_vars & !boolean_vars
 data[need_scale] <- scale(data[need_scale])
 ```
 
-Now check to see how many variables display significance
-
+## Logisitic Regression with No Regularization
 ```{r}
-# linear regression model
-lin_reg_model <- lm(DEATH_EVENT ~ ., data = data)
+# convert DEATH_EVENT to a factor 
+data <- data %>%
+  mutate(DEATH_EVENT = as.factor(DEATH_EVENT))
 
-summary(lin_reg_model)
+log_reg_model <- glm(DEATH_EVENT ~ ., data = data, family = binomial)
+
+summary(log_reg_model)
 ```
 
 It looks like there are quite a few predictors that do not display a significant correlation with the response. Ridge regression seems most appropriate. Will do both ridge regression and lasso and compare 
 
-```{r}
-# Ridge regression alt way 
-
-x <- model.matrix(DEATH_EVENT ~ ., data)[, -1]
-y <- data$DEATH_EVENT
-
-ridge_model <- glmnet(x, y, alpha = 0, family = "binomial")
-
-ridge_cv <- cv.glmnet(x, y, alpha = 0, family = "binomial")
-ridge_best_lambda <- ridge_cv$lambda.min
-
-ridge_final <-glmnet(x, y, alpha = 0, lambda = ridge_best_lambda, family = "binomial")
-```
-
-```{r}
-# Lasso alt way
-
-lasso_model <- glmnet(x, y, alpha = 1, family = "binomial")
-
-lasso_cv <- cv.glmnet(x, y, alpha = 1, family = "binomial")
-lasso_best_lambda <- lasso_cv$lambda.min
-
-lasso_final <- glmnet(x, y, alpha = 1, lambda = lasso_best_lambda, family = "binomial")
-```
-
+## Ridge Regression
 ```{r}
 library(tidymodels)
 library(tidyverse)
 library(ggplot2)
 
-# Ridge Regression
+# create vector of 100 lambda values from 0.01 to 10^10
 lambda <- lambda <- 10^seq(-2, 10, length.out = 100)
 tune_df <- data.frame(lambda = lambda)
 
+# fit ridge regression model for each lambda
 prep_data <- recipe(DEATH_EVENT ~ ., data = data)
 
 ridge_ests <- data.frame()
+
 for(lam in lambda) {
-  ridge_spec <- linear_reg(mixture = 0, penalty = lam) |>
-    set_mode("regression") |>
+  ridge_spec <- logistic_reg(mixture = 0, penalty = lam) |>
+    set_mode("classification") |>
     set_engine("glmnet")
   
     workflow() |>
@@ -81,7 +59,7 @@ for(lam in lambda) {
     bind_rows(ridge_ests) -> ridge_ests
 }
 
-# visualization of estimated coefficients for each lambda
+# visualize estimated coefficients for each lambda
 ridge_ests |>
   filter(term != "(Intercept)") |>
   ggplot() +
@@ -89,39 +67,41 @@ ridge_ests |>
   #geom_vline(xintercept = ridge_best$lambda) +
   coord_trans(x = "log10")
 
+# perform 10-fold cross validation, estimate test MSE for each lambda
 data_10foldcv <- vfold_cv(data, v = 10)
 
-ridge_spec <- linear_reg(mixture = 0, penalty = tune("lambda")) |>
-  set_mode("regression") |>
+ridge_spec <- logistic_reg(mixture = 0, penalty = tune("lambda")) |>
+  set_mode("classification") |>
   set_engine("glmnet")
 
 workflow() |>
   add_model(ridge_spec) |>
   add_recipe(prep_data) |>
-  tune_grid(resamples = data_10foldcv, grid = tune_df) -> ridge_tune
+  tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> ridge_tune
 
 ridge_tune |>
   collect_metrics() |>
   select(lambda, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   ggplot() +
-  geom_line(aes(lambda, rmse^2)) +
-  geom_point(aes(lambda, rmse^2)) +
+  geom_line(aes(lambda, roc_auc)) + 
+  geom_point(aes(lambda, roc_auc)) +
   #geom_point(aes(ridge_best$lambda, (ridge_best$mean)^2), color = "red") +
   coord_trans(x = "log10")
 
-show_best(ridge_tune, metric = "rmse", n = 1)
+# determine best lambda
+show_best(ridge_tune, metric = "roc_auc", n = 1)
 ```
 
 
-
+## Lasso
 ```{r}
-# Lasso
 
+# fit lasso model for each lambda
 lasso_ests <- data.frame()
 for(lam in lambda) {
-  lasso_spec <- linear_reg(mixture = 1, penalty = lam) |>
-    set_mode("regression") |>
+  lasso_spec <- logistic_reg(mixture = 1, penalty = lam) |>
+    set_mode("classification") |>
     set_engine("glmnet")
   
     workflow() |>
@@ -139,38 +119,38 @@ lasso_ests |>
   #geom_vline(xintercept = lasso_best$lambda) +
   coord_trans(x = "log10")
 
-lasso_spec <- linear_reg(mixture = 1, penalty = tune("lambda")) |>
-  set_mode("regression") |>
+lasso_spec <- logistic_reg(mixture = 1, penalty = tune("lambda")) |>
+  set_mode("classification") |>
   set_engine("glmnet")
 
 workflow() |>
   add_model(lasso_spec) |>
   add_recipe(prep_data) |>
-  tune_grid(resamples = data_10foldcv, grid = tune_df) -> lasso_tune
+  tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> lasso_tune
 
 lasso_tune |>
   collect_metrics() |>
   select(lambda, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   ggplot() +
-  geom_line(aes(lambda, rmse^2)) +
-  geom_point(aes(lambda, rmse^2)) +
+  geom_line(aes(lambda, roc_auc)) +
+  geom_point(aes(lambda, roc_auc)) +
   #geom_point(aes(lasso_best$lambda, (lasso_best$mean)^2), color = "red") +
   coord_trans(x = "log10")
 
-show_best(lasso_tune, metric = "rmse", n = 1)
+show_best(lasso_tune, metric = "roc_auc", n = 1)
 ```
 
 
 ```{r}
 ridge_metrics <- ridge_tune |>
   collect_metrics() |>
-  filter(.metric == "rmse") |>
+  filter(.metric == "roc_auc") |>
   mutate(method = "Ridge")
 
 lasso_metrics <- lasso_tune |>
   collect_metrics() |>
-  filter(.metric == "rmse") |>
+  filter(.metric == "roc_auc") |>
   mutate(method = "Lasso")
 
 combined_metrics <- bind_rows(ridge_metrics, lasso_metrics)
@@ -185,13 +165,13 @@ combined_metrics |>
   labs(
     title = "Comparison of Ridge and Lasso Regression",
     x = "Lambda (Log Scale)",
-    y = "Mean RMSE",
+    y = "roc_auc",
     color = "Method")
 
-ridge_best <- show_best(ridge_tune, metric = "rmse", n = 1)
+ridge_best <- show_best(ridge_tune, metric = "roc_auc", n = 1)
 print(ridge_best)
 
-lasso_best <- show_best(lasso_tune, metric = "rmse", n = 1)
+lasso_best <- show_best(lasso_tune, metric = "roc_auc", n = 1)
 print(lasso_best)
 ```
 
