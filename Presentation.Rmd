@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 - Investigating heart failure, a condition impacting millions worldwide, and exploring its complex causes and contributing factors.
 
-- 
+- Spotting patterns between risk factors and how heart failure progresses to get a better understanding.
 
 # Linearity and Normality (Neha)
 
