@@ -43,13 +43,66 @@ which penalizes large coefficients to stabilize the model, though it doesn't eli
 less interpretable than Lasso. Finally, we used Lasso regularization, which not only penalizes coefficients, but also performs feature selection by shrinking some to zero, improving interpretability. Comparing their 
 predictive power helps determine which approach balances accuracy and simplicity best.
 
-```{r, include=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 set.seed(445)
 
 library(tidymodels)
 library(tidyverse)
 library(ggplot2)
+
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+# scale continuous variables
+numeric_vars <- sapply(data, is.numeric)
+boolean_vars <- sapply(data, function(x) all(x %in% c(0,1)))
+
+need_scale <- numeric_vars & !boolean_vars
+
+data[need_scale] <- scale(data[need_scale])
+
+# convert DEATH_EVENT to a factor 
+data <- data %>%
+  mutate(DEATH_EVENT = factor(DEATH_EVENT, levels = c("0", "1")))
 ```
+
+Because the predictor variables are of varying ranges and units, we began by scaling all continuous features to prevent our regularization techniques from over-penalizing variables with larger ranges. Next, we split our data into a training set (containing 80% of the data) and a test set (containing 20%) so that we could assess the performance of our logistic regression models using cross validation.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# split data into training set (80%) and test set (20%)
+data_split <- initial_split(data, prop = 0.8)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+prep_data <- recipe(DEATH_EVENT ~ ., data = train_data)
+```
+
+Once this setup was complete, we created our first logistic regression model with no regularization. The metrics we used to assess the performance of these models are roc_auc, which is the area under the receiver-operating characteristic (ROC) curve that represents the probability that the model will correctly rank a randomly selected positive example higher than a negative one, as well as accuracy, which is the proportion of correct predictions out of all total predictions. Below are the roc_auc and accuracy values of the first logistic regression model with no regularization:
+
+```{r,echo=FALSE, warning=FALSE}
+# fit logistic regression model
+logistic_spec <- logistic_reg(penalty = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+final_logistic_workflow <- workflow() %>%
+  add_model(logistic_spec) %>%
+  add_recipe(prep_data)
+
+final_logistic_model <- fit(final_logistic_workflow, data = train_data)
+
+# evaluate logistic model on test set
+logistic_predictions <- predict(final_logistic_model, test_data, type = "prob") %>%
+  bind_cols(test_data) %>%
+  # creating pred_class column by converting probabilities into class predictions
+  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+
+logistic_metrics <- roc_auc(logistic_predictions, truth = DEATH_EVENT, .pred_1) %>%
+  bind_rows(accuracy(logistic_predictions, truth = DEATH_EVENT, .pred_class))
+
+# print logistic model metrics
+print(logistic_metrics)
+```
+
 
 
 #### Support Vector Machine
