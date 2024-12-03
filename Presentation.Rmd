@@ -26,7 +26,11 @@ knitr::opts_chunk$set(echo = FALSE)
 # Logistic Regression (Witlie)
 
 
-# SVM & Random Forest (Paige)
+# SVM (Paige)
+
+
+# Random Forest (paige)
+
 
 
 # Results (Paige)
