@@ -198,10 +198,12 @@ cat("Accuracy: ", round(accuracy, 3))
 
 ##ROC Curve
 ```{r}
+
 rf_probs <- predict(rf_model, test_data, type = "prob")[, 2] 
 roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
 
 plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
+
 ```
 
 ## Variable Importance Plot
