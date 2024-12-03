@@ -36,6 +36,7 @@ transformations before applying machine learning techniques.
 #### Logistic Regression with Regularization
 
 
+
 Logistic regression is a go-to method for binary classification, and we explored three versions to analyze 
 predictive performance. First, we fit a basic logistic regression model without regularization as a baseline. 
 While simple, it doesn't handle collinearity or irrelevant predictors. Next, we applied Ridge regression regularization, 
@@ -103,6 +104,228 @@ logistic_metrics <- roc_auc(logistic_predictions, truth = DEATH_EVENT, .pred_1) 
 print(logistic_metrics)
 ```
 
+The logistic regression model with no regularization gave an roc_auc value of 0.1325 and an accuracy value of 0.8333. This accuracy value is fairly high, but the roc_auc value is very low, which indicates poor performance.
+
+Next, we created a logistic regression model including ridge regression regularization. We determined the optimal lambda penalty value using cross validation.
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+# create vector of 100 lambda values from 0.01 to 10^10
+lambda <- lambda <- 10^seq(-2, 10, length.out = 100)
+tune_df <- data.frame(lambda = lambda)
+
+# fit ridge regression model for each lambda
+prep_data <- recipe(DEATH_EVENT ~ ., data = data)
+
+ridge_ests <- data.frame()
+
+for(lam in lambda) {
+  ridge_spec <- logistic_reg(mixture = 0, penalty = lam) |>
+    set_mode("classification") |>
+    set_engine("glmnet")
+  
+    workflow() |>
+    add_model(ridge_spec) |>
+    add_recipe(prep_data) |>
+    fit(data) |>
+    tidy() |>
+    bind_rows(ridge_ests) -> ridge_ests
+}
+
+# visualize estimated coefficients for each lambda
+ridge_ests |>
+  filter(term != "(Intercept)") |>
+  ggplot() +
+  labs(title = "Ridge Regression: Coefficient Estimates vs Penalty") +
+  geom_line(aes(penalty, estimate, group = term, colour = term)) +
+  coord_trans(x = "log10")
+```
+
+This graph depicts the estimated value of each coefficient corresponding to each feature for each lambda value tested. As the penalty lambda value increases, the coefficient estimates diminish towards zero without being removed entirely.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# perform 10-fold cross validation, estimate roc_auc for each lambda
+data_10foldcv <- vfold_cv(data, v = 10)
+
+ridge_spec <- logistic_reg(mixture = 0, penalty = tune("lambda")) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+
+workflow() |>
+  add_model(ridge_spec) |>
+  add_recipe(prep_data) |>
+  tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> ridge_tune
+
+ridge_tune |>
+  collect_metrics() |>
+  select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  labs(title = "Ridge Regression: roc_auc vs lambda") +
+  geom_line(aes(lambda, roc_auc)) + 
+  geom_point(aes(lambda, roc_auc)) +
+  coord_trans(x = "log10")
+```
+
+This graph depicts the roc_auc value for each lambda tested. A higher roc_auc value indicates better performance, and we can see there is a significant and sudden drop in roc_auc value after approximately the first third of lambda values. After completing cross validation, we can see which lambda value demonstrates the best performance: 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# determine best lambda
+show_best(ridge_tune, metric = "roc_auc", n = 1)
+
+ridge_metrics <- ridge_tune |>
+  collect_metrics() |>
+  filter(.metric == "roc_auc") |>
+  mutate(method = "Ridge")
+
+ridge_best <- show_best(ridge_tune, metric = "roc_auc", n = 1)
+
+ridge_tune |>
+  collect_metrics() |>
+  select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  labs(title = "Ridge Regression: roc_auc vs lambda") +
+  geom_line(aes(lambda, roc_auc)) + 
+  geom_point(aes(lambda, roc_auc)) +
+  geom_point(aes(ridge_best$lambda, ridge_best$mean), color = "red") +
+  coord_trans(x = "log10")
+```
+
+Once we have chosen the optimal penalty, we can fit the ridge regression model with this lambda value and assess its performance with roc_auc and accuracy metrics:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# finalize ridge with best lambda
+best_ridge_lambda <- show_best(ridge_tune, metric = "roc_auc", n = 1)$lambda
+
+final_ridge_spec <- logistic_reg(penalty = best_ridge_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+final_ridge_workflow <- workflow() %>%
+  add_model(final_ridge_spec) %>%
+  add_recipe(prep_data)
+
+final_ridge_model <- fit(final_ridge_workflow, data = train_data)
+
+# evaluate ridge model on test set
+ridge_predictions <- predict(final_ridge_model, test_data, type = "prob") %>%
+  bind_cols(test_data) %>%
+  # creating pred_class column by converting probabilities into class predictions
+  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+
+ridge_metrics <- roc_auc(ridge_predictions, truth = DEATH_EVENT, .pred_1) %>%
+  bind_rows(accuracy(ridge_predictions, truth = DEATH_EVENT, .pred_class))
+
+print(ridge_metrics)
+```
+
+The logistic regression model with ridge regression regularization gave an roc_auc value of 0.1374 and an accuracy value of 0.8333. These values are nearly identical to those of the logistic model with no regularization.
+
+For our final logistic regression model, we will implement lasso, once again using cross validation to determine the optimal lambda penalty value.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# fit lasso model for each lambda
+lasso_ests <- data.frame()
+for(lam in lambda) {
+  lasso_spec <- logistic_reg(mixture = 1, penalty = lam) |>
+    set_mode("classification") |>
+    set_engine("glmnet")
+  
+    workflow() |>
+    add_model(lasso_spec) |>
+    add_recipe(prep_data) |>
+    fit(data) |>
+    tidy() |>
+    bind_rows(lasso_ests) -> lasso_ests
+}
+
+# visualize estimated coefficients for each lambda
+lasso_ests |>
+  filter(term != "(Intercept)") |>
+  ggplot() +
+  labs(title = "Lasso Method: Coefficient Estimates vs Penalty") +
+  geom_line(aes(penalty, estimate, group = term, colour = term)) +
+  coord_trans(x = "log10")
+```
+
+Here we can see the coefficient estimates reduce towards zero as lambda increases. The reduction in coefficient estimates is notably steeper for lasso than with ridge regression. Unlike ridge regression, lasso performs feature selection by driving some coefficients to equal zero, thus eliminating them. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# perform 10-fold cross validation, estimate roc_auc for each lambda
+lasso_spec <- logistic_reg(mixture = 1, penalty = tune("lambda")) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+
+workflow() |>
+  add_model(lasso_spec) |>
+  add_recipe(prep_data) |>
+  tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> lasso_tune
+
+lasso_tune |>
+  collect_metrics() |>
+  select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  labs(title = "Lasso Method: roc_auc vs lambda") +
+  geom_line(aes(lambda, roc_auc)) +
+  geom_point(aes(lambda, roc_auc)) +
+  coord_trans(x = "log10")
+```
+
+We can see in the graph above a significant and sudden drop in roc_auc value after the first dozen lambda values. After completing cross validation, we can see which lambda value demonstrates the best performance:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+show_best(lasso_tune, metric = "roc_auc", n = 1)
+
+lasso_metrics <- lasso_tune |>
+  collect_metrics() |>
+  filter(.metric == "roc_auc") |>
+  mutate(method = "Lasso")
+
+lasso_best <- show_best(lasso_tune, metric = "roc_auc", n = 1)
+
+# show best lambda with lasso
+lasso_tune |>
+  collect_metrics() |>
+  select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  geom_line(aes(lambda, roc_auc)) +
+  labs(title = "Lasso Method: roc_auc vs lambda") +
+  geom_point(aes(lambda, roc_auc)) +
+  geom_point(aes(lasso_best$lambda, lasso_best$mean), color = "red") +
+  coord_trans(x = "log10")
+```
+
+Again, once we have chosen the optimal penalty, we can fit the lasso model with this lambda value and assess its performance with roc_auc and accuracy metrics:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# finalize lasso with best lambda
+best_lasso_lambda <- show_best(lasso_tune, metric = "roc_auc", n = 1)$lambda
+
+final_lasso_spec <- logistic_reg(penalty = best_lasso_lambda, mixture = 1) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+final_lasso_workflow <- workflow() %>%
+  add_model(final_lasso_spec) %>%
+  add_recipe(prep_data)
+
+final_lasso_model <- fit(final_lasso_workflow, data = train_data)
+
+# evaluate lasso model on test set
+lasso_predictions <- predict(final_lasso_model, test_data, type = "prob") %>%
+  bind_cols(test_data) %>%
+  # creating pred_class column by converting probabilities into class predictions
+  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+
+lasso_metrics <- roc_auc(lasso_predictions, truth = DEATH_EVENT, .pred_1) %>%
+  bind_rows(accuracy(lasso_predictions, truth = DEATH_EVENT, .pred_class))
+
+print(lasso_metrics)
+```
+
+The logistic regression model with ridge regression regularization gave an roc_auc value of 0.1027 and an accuracy value of 0.850. These values are again nearly identical to those of the logistic model with no regularization and the logisitic model with ridge regression. The lasso model provided the highest accuracy of the three models, but also an even lower roc_auc value. 
 
 
 
@@ -172,7 +395,13 @@ From this code we conclude that there are only 13 predictive variables we should
 
 Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also robust to overfitting, particularly compared to individual decision trees, and provides a built-in estimate of model performance through out-of-bag error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
 
+<<<<<<< HEAD
 
+=======
+# Results
+
+None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data. Roc_auc values of 0.10 - 0.13 indicate that the model is performing worse than chance (0.5). A low roc_auc value indicates poor discrimination ability. Having a high accuracy value with a low roc_auc value might suggest that accuracy is being misleadingly driven up by the model assigning predictions to the majority class (in our case, death event = 0). 
+>>>>>>> 06e66d4c39f850846dcef0b1529f6760960600e5
 
 # References
 
