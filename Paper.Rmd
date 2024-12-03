@@ -336,7 +336,7 @@ Support Vector Machines (SVMs) are primarily binary classifiers. When dealing wi
 
 We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. They demonstrate the most ambiguous points of data. 
 
-```{r, echo=FALSE}
+```{rr,echo=FALSE, warning=FALSE}
 
 predictions <- predict(svm_model, test_data)
 
