@@ -19,11 +19,16 @@ knitr::opts_chunk$set(echo = FALSE)
 
 - Spotting patterns between risk factors and how heart failure progresses to get a better understanding.
 
+
 # Linearity and Normality (Neha)
 
-# SVM & Random Forest (Paige)
-queen
 
 # Logistic Regression (Witlie)
 
+
+# SVM & Random Forest (Paige)
+
+
 # Results (Paige)
+
+
