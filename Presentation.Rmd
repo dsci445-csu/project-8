@@ -11,3 +11,18 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+# Introduction (Witlie)
+
+# Motivation (Neha)
+
+- Investigating heart failure, a condition impacting millions worldwide, and exploring its complex causes and contributing factors.
+
+- 
+
+# Linearity and Normality (Neha)
+
+# SVM & Random Forest (Paige)
+
+# Logistic Regression (Witlie)
+
+# Results (Paige)
