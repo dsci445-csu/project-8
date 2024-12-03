@@ -359,6 +359,7 @@ Support Vector Machines (SVMs) are primarily binary classifiers. When dealing wi
 
 We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. They demonstrate the most ambiguous points of data. 
 
+<<<<<<< HEAD
 ```{r, echo=FALSE}
 library(caTools) 
 library(randomForest) 
@@ -377,6 +378,9 @@ library(pROC)
 svm_model <- svm(DEATH_EVENT ~ ., data = train_data, kernel = "radial", cost = 1, scale = TRUE)
 
 summary(svm_model)
+=======
+```{rr,echo=FALSE, warning=FALSE}
+>>>>>>> 8393f33d50a9406bf968fd88de1874c625756827
 
 predictions <- predict(svm_model, test_data)
 
@@ -388,7 +392,7 @@ print(paste("Accuracy: ", round(accuracy, 3)))
 
 ```
 
-From this code we conclude that there are only 13 predictive variables we should consider. We also considered the accuracy of how the SVM model this allows us to understand its predictive capabilities.  We also conclude that this model will have an accuracy of 0.817 this inidcates the model. 
+From this code we conclude that there are only 13 predictive variables we should consider. We also considered the accuracy of how the SVM model this allows us to understand its predictive capabilities.  We also conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions.  
 
 
 #### Random Forest
