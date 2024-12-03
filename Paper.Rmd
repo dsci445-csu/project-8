@@ -43,13 +43,66 @@ which penalizes large coefficients to stabilize the model, though it doesn't eli
 less interpretable than Lasso. Finally, we used Lasso regularization, which not only penalizes coefficients, but also performs feature selection by shrinking some to zero, improving interpretability. Comparing their 
 predictive power helps determine which approach balances accuracy and simplicity best.
 
-```{r, include=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 set.seed(445)
 
 library(tidymodels)
 library(tidyverse)
 library(ggplot2)
+
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+# scale continuous variables
+numeric_vars <- sapply(data, is.numeric)
+boolean_vars <- sapply(data, function(x) all(x %in% c(0,1)))
+
+need_scale <- numeric_vars & !boolean_vars
+
+data[need_scale] <- scale(data[need_scale])
+
+# convert DEATH_EVENT to a factor 
+data <- data %>%
+  mutate(DEATH_EVENT = factor(DEATH_EVENT, levels = c("0", "1")))
 ```
+
+Because the predictor variables are of varying ranges and units, we began by scaling all continuous features to prevent our regularization techniques from over-penalizing variables with larger ranges. Next, we split our data into a training set (containing 80% of the data) and a test set (containing 20%) so that we could assess the performance of our logistic regression models using cross validation.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# split data into training set (80%) and test set (20%)
+data_split <- initial_split(data, prop = 0.8)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+prep_data <- recipe(DEATH_EVENT ~ ., data = train_data)
+```
+
+Once this setup was complete, we created our first logistic regression model with no regularization. The metrics we used to assess the performance of these models are roc_auc, which is the area under the receiver-operating characteristic (ROC) curve that represents the probability that the model will correctly rank a randomly selected positive example higher than a negative one, as well as accuracy, which is the proportion of correct predictions out of all total predictions. Below are the roc_auc and accuracy values of the first logistic regression model with no regularization:
+
+```{r,echo=FALSE, warning=FALSE}
+# fit logistic regression model
+logistic_spec <- logistic_reg(penalty = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+final_logistic_workflow <- workflow() %>%
+  add_model(logistic_spec) %>%
+  add_recipe(prep_data)
+
+final_logistic_model <- fit(final_logistic_workflow, data = train_data)
+
+# evaluate logistic model on test set
+logistic_predictions <- predict(final_logistic_model, test_data, type = "prob") %>%
+  bind_cols(test_data) %>%
+  # creating pred_class column by converting probabilities into class predictions
+  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+
+logistic_metrics <- roc_auc(logistic_predictions, truth = DEATH_EVENT, .pred_1) %>%
+  bind_rows(accuracy(logistic_predictions, truth = DEATH_EVENT, .pred_class))
+
+# print logistic model metrics
+print(logistic_metrics)
+```
+
 
 
 
@@ -60,15 +113,33 @@ library(ggplot2)
 #### Support Vector Machine
 
 
-Support Vector Machines (SVMs) are primarily binary classifiers. When dealing with more than two classes, SVMs can handle multi-class classification by applying techniques like "one-vs-one" or "one-vs-all," where multiple binary classifications are combined. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries.
+Support Vector Machines (SVMs) are primarily binary classifiers. When dealing with more than two classes, SVMs can handle multi-class classification by applying techniques like "one-vs-one" or "one-vs-all," where multiple binary classifications are combined. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handels linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships, which our data is. It does not assume any specific distribution of predictors since none of our predictors are normal.
 
-Can handle linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships (which it seems like our data is). Does not assume any specific distribution of predictors (which is good because none of our predictors are normal) 
 
+We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. They demonstrate the most ambiguous points of data. 
+
+```{r, echo=FALSE}
+
+predictions <- predict(svm_model, test_data)
+
+conf_matrix <- table(Predicted = predictions, Actual = test_data$DEATH_EVENT)
+print(conf_matrix)
+
+accuracy <- sum(predictions == test_data$DEATH_EVENT) / length(predictions)
+
+print(paste("Accuracy: ", round(accuracy, 3)))
+
+```
+
+From this code we conclude that there are only 13 predictive variables we should consider. We also considered the accuracy of how the SVM model this allows us to understand its predictive capabilities.  We also conclude that this model will have an accuracy of 0.817 this inidcates the model. 
 
 
 #### Random Forest
 
-Does not assume linear or nonlinear relationship between predictors and response. Good for non-normal variables.
+Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also robust to overfitting, particularly compared to individual decision trees, and provides a built-in estimate of model performance through out-of-bag error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
+
+
+
 
 #### Assessment
 

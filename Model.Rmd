@@ -213,36 +213,7 @@ varImpPlot(rf_model,
            pch = 16)
 ```
 
-## Random Forest Tree Plot
-```{r}
-library(rpart.plot)
-rpart.plot(rf_model$forest$tree[[1]], 
-           main = "Random Forest Tree", 
-           extra = 1) 
-```
 
-```{r}
-library(party)
-
-# Visualize the first tree in the Random Forest model
-# Extract the first tree from the randomForest object and convert it to a ctree object for visualization
-first_tree <- randomForest::getTree(rf_model, k = 1, labelVar = TRUE)
-
-# Use the party package to plot the tree
-ctree_first_tree <- as.party(first_tree)
-plot(ctree_first_tree, main = "First Tree from Random Forest")
-# Variable Importance Plot
-varImpPlot(rf_model, 
-           main = "Variable Importance Plot", 
-           type = 1,      # Mean Decrease Accuracy
-           col = "blue",  # Color of bars
-           pch = 16)      # Points for importance values
-
-# OOB Error Plot
-plot(rf_model, main = "OOB Error Plot")
-
-
-```
 
 
 ## I am going to do some cross validation - Neha
@@ -298,7 +269,6 @@ results <- rbind(
   data.frame(Model = "SVM", ROC = svm_model$results$ROC)
 )
 
-library(ggplot2)
 ggplot(results, aes(x = Model, y = ROC, fill = Model)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = c("Random Forest" = "blue", "SVM" = "red")) +
