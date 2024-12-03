@@ -137,6 +137,23 @@ Support Vector Machines (SVMs) are primarily binary classifiers. When dealing wi
 We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. They demonstrate the most ambiguous points of data. 
 
 ```{r, echo=FALSE}
+library(caTools) 
+library(randomForest) 
+library(e1071) 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(MASS)
+library(GGally)
+library(tidymodels)
+library(ISLR)
+library(class)
+library(reshape2)
+library(pROC)
+svm_model <- svm(DEATH_EVENT ~ ., data = train_data, kernel = "radial", cost = 1, scale = TRUE)
+
+summary(svm_model)
 
 predictions <- predict(svm_model, test_data)
 
@@ -144,7 +161,6 @@ conf_matrix <- table(Predicted = predictions, Actual = test_data$DEATH_EVENT)
 print(conf_matrix)
 
 accuracy <- sum(predictions == test_data$DEATH_EVENT) / length(predictions)
-
 print(paste("Accuracy: ", round(accuracy, 3)))
 
 ```
@@ -157,13 +173,6 @@ From this code we conclude that there are only 13 predictive variables we should
 Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also robust to overfitting, particularly compared to individual decision trees, and provides a built-in estimate of model performance through out-of-bag error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
 
 
-
-
-#### Assessment
-
-Compare the results of Logistic Regression, SVM, and Random Forest
-
-# Results
 
 # References
 
