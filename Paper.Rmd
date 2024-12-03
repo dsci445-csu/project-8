@@ -108,6 +108,24 @@ print(logistic_metrics)
 
 ## Linearity and Normality 
 
+In this analysis, we begin by testing the normality of several continuous variables in the dataset, including 
+age, creatinine phosphokinase, ejection fraction, platelets, serum creatinine, and serum sodium. First, we 
+used histograms and Q-Q plots to visually inspect the distribution of these variables. The histograms for most
+variables indicated skewness, either to the right or left, suggesting that these variables do not follow a 
+normal distribution. Platelets and serum sodium appeared to be the most normally distributed, but even they 
+showed some deviation from normality. The Q-Q plots confirmed these observations, showing that age, 
+ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables 
+exhibited greater deviations.
+
+To check the normality of the continuous variables, we performed the Shapiro-Wilk test, and all p-values were 
+below 0.05, indicating that none of the variables followed a normal distribution.
+
+We then examined the relationship between these variables and the binary outcome, DEATH_EVENT, using scatter 
+plots with linear regression lines. These plots showed that variables like age and serum creatinine were 
+somewhat associated with the likelihood of death, showing linear trends in most cases. Logistic regression 
+models confirmed that many of the variables, such as age and serum creatinine, were significantly related to 
+the risk of death.
+
 
 
 #### Support Vector Machine
