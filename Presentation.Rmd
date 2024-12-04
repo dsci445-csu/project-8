@@ -92,7 +92,7 @@ for (var in selected_vars) {
 
 - Scatterplots of each variable vs. DEATH_EVENT:
 
-- Fitted linear trendlines show linear relationships for most variables.
+- Fitted linear trendlines show non linear relationships for most variables.
 
 - Logistic regression results:
 Predictor variables (e.g., Age, Serum Creatinine) significantly linked to DEATH_EVENT likelihood.
