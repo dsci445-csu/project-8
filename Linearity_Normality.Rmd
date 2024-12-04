@@ -11,7 +11,6 @@ data <- read.csv("heart_failure_clinical_records_dataset.csv")
 continuous_vars <- c("age", "creatinine_phosphokinase", "ejection_fraction", 
                      "platelets", "serum_creatinine", "serum_sodium")
 
-# Normality Test
 par(mfrow = c(2, 2)) # Set up a grid for multiple plots
 for (var in continuous_vars) {
   
@@ -46,7 +45,22 @@ model_quad <- glm(DEATH_EVENT ~ data[[var]] + I(data[[var]]^2), family = binomia
 summary(model_quad)
 
 
+```
+```{r}
+model <- glm(DEATH_EVENT ~ age + serum_creatinine + ejection_fraction, data=data, family=binomial)
 
+fitted_values <- fitted(model)
+residuals <- residuals(model, type="pearson")
+plot(fitted_values, residuals, main="Residuals vs Fitted Values", xlab="Fitted Values", ylab="Residuals")
+abline(h=0, col="red")
+
+```
+
+
+```{r}
+library(ggplot2)
+model <- glm(DEATH_EVENT ~ ., data = data, family = binomial)
+model
 ```
 
 ## For all variables tested, the Shapiro-Wilk test produced p-values below 0.05, meaning none of these variables follow a normal distribution
@@ -54,7 +68,6 @@ summary(model_quad)
 ## almost all of the histograms were either skewed right or left which indicates a low level of normality. the platlets and serum sodium were the ones the were the most normally dsitributed. 
 
 ## using the qq plots i can see that age, ejection, serum sodium, and platlets seem to be the most normal. the other variables were not as normal. 
-
 
 ## The logistic regression results show that the predictor variables (like age or serum creatinine) are significantly linked to the likelihood of a DEATH_EVENT. The model seems to fit well, as shown by the lower residual deviance. 
 

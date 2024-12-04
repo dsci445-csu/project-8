@@ -157,7 +157,7 @@ workflow() |>
 
 ridge_tune |>
   collect_metrics() |>
-  select(lambda, .metric, mean) |>
+  dplyr::select(lambda, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   ggplot() +
   labs(title = "Ridge Regression: roc_auc vs lambda") +
@@ -181,7 +181,7 @@ ridge_best <- show_best(ridge_tune, metric = "roc_auc", n = 1)
 
 ridge_tune |>
   collect_metrics() |>
-  select(lambda, .metric, mean) |>
+  dplyr::select(lambda, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   ggplot() +
   labs(title = "Ridge Regression: roc_auc vs lambda") +
@@ -359,28 +359,17 @@ Support Vector Machines (SVMs) are primarily binary classifiers. When dealing wi
 
 We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. They demonstrate the most ambiguous points of data. 
 
-<<<<<<< HEAD
-```{r, echo=FALSE}
-library(caTools) 
-library(randomForest) 
-library(e1071) 
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(readr)
-library(MASS)
-library(GGally)
-library(tidymodels)
-library(ISLR)
-library(class)
-library(reshape2)
-library(pROC)
+
+```{r, echo=FALSE, include=FALSE}
+set.seed(42)
+
+split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
+train_data <- subset(scaled_data, split == TRUE)
+test_data <- subset(scaled_data, split == FALSE)
+
 svm_model <- svm(DEATH_EVENT ~ ., data = train_data, kernel = "radial", cost = 1, scale = TRUE)
 
 summary(svm_model)
-=======
-```{rr,echo=FALSE, warning=FALSE}
->>>>>>> 8393f33d50a9406bf968fd88de1874c625756827
 
 predictions <- predict(svm_model, test_data)
 

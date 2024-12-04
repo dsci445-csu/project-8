@@ -1,5 +1,5 @@
 ---
-title: "Predicting Heart Failure from Behavioral Risk Factor Data"
+title: "Predicting Heart Failure from Risk Factor Data"
 author: "Paige Galvan, Neha Deshpande, & Witlie Leslie"
 date: "2024-11-25"
 output:
@@ -11,7 +11,32 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+
+```{r, include = FALSE}
+library(caTools) 
+library(randomForest) 
+library(e1071) 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(MASS)
+library(GGally)
+library(tidymodels)
+library(ISLR)
+library(class)
+library(reshape2)
+library(pROC)
+```
+
 ## Introduction (Witlie)
+
+For our project, we aimed to create a model that can predict the event of death as a result of heart failure from clinical patient data.
+
+- Binary response variable "DEATH_EVENT", value of 1 indicating patient deceased (0 otherwise)
+- 12 risk factor variables
+    - 5 binary: anemia status, diabetes status, high blood pressure status, sex, and smoking status
+    - 7 numerical: age, creatine phosphokinase level, ejection fraction, platelet concentration, serum creatine level, serum sodium level, and length of follow-up period
 
 # Motivation (Neha)
 
@@ -19,10 +44,326 @@ knitr::opts_chunk$set(echo = FALSE)
 
 - Spotting patterns between risk factors and how heart failure progresses to get a better understanding.
 
+
 # Linearity and Normality (Neha)
+
+Normality
+
+- Objective: Assess whether continuous predictor variables are normally distributed.
+
+- Variables analyzed:
+Age, Creatinine Phosphokinase, Ejection Fraction, Platelets, Serum Creatinine, Serum Sodium.
+
+
+- Tests performed: 
+
+Shapiro-Wilk Test:
+p-values < 0.05 for all variables → None follow a normal distribution.
+
+# Graphs
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+# Select a few continuous variables
+selected_vars <- c("age", "serum_creatinine")
+
+# Set up the plotting area to display two histograms and two Q-Q plots on one slide
+par(mfrow = c(2, 2)) # 2 rows and 2 columns
+
+# Loop through the selected variables to create histograms and Q-Q plots
+for (var in selected_vars) {
+  
+  # Histogram for the selected variable
+  hist(data[[var]], main = paste("Histogram of", var), 
+       xlab = var, col = "skyblue", border = "white")
+  
+  # Q-Q Plot for the selected variable
+  qqnorm(data[[var]], main = paste("Q-Q Plot of", var))
+  qqline(data[[var]], col = "red")
+}
+
+
+```
+
+
+# Linearity 
+
+- Scatterplots of each variable vs. DEATH_EVENT:
+
+- Fitted linear trendlines show linear relationships for most variables.
+
+- Logistic regression results:
+Predictor variables (e.g., Age, Serum Creatinine) significantly linked to DEATH_EVENT likelihood.
+Residual deviance was low, suggesting a good fit.
+
+
+# Graphs 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+model <- glm(DEATH_EVENT ~ age + serum_creatinine + ejection_fraction, data=data, family=binomial)
+
+fitted_values <- fitted(model)
+residuals <- residuals(model, type="pearson")
+plot(fitted_values, residuals, main="Residuals vs Fitted Values", xlab="Fitted Values", ylab="Residuals")
+abline(h=0, col="red")
+
+```
+
 
 # SVM & Random Forest (Paige)
 
 # Logistic Regression (Witlie)
 
+Logistic regression was an obvious first choice in tackling this binary classification problem. I created 3 models to assess predictive performance with different regularization methods.
+
+- Ridge Regression
+- Lasso
+- No regularization
+
+# Ridge Regression
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(445)
+
+library(tidymodels)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+# scale continuous variables
+numeric_vars <- sapply(data, is.numeric)
+boolean_vars <- sapply(data, function(x) all(x %in% c(0,1)))
+
+need_scale <- numeric_vars & !boolean_vars
+
+data[need_scale] <- scale(data[need_scale])
+
+# convert DEATH_EVENT to a factor 
+data <- data %>%
+  mutate(DEATH_EVENT = factor(DEATH_EVENT, levels = c("0", "1")))
+
+data_split <- initial_split(data, prop = 0.8)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+prep_data <- recipe(DEATH_EVENT ~ ., data = train_data)
+
+# create vector of 100 lambda values from 0.01 to 10^10
+lambda <- lambda <- 10^seq(-2, 10, length.out = 100)
+tune_df <- data.frame(lambda = lambda)
+
+# fit ridge regression model for each lambda
+prep_data <- recipe(DEATH_EVENT ~ ., data = data)
+
+ridge_ests <- data.frame()
+
+for(lam in lambda) {
+  ridge_spec <- logistic_reg(mixture = 0, penalty = lam) |>
+    set_mode("classification") |>
+    set_engine("glmnet")
+  
+    workflow() |>
+    add_model(ridge_spec) |>
+    add_recipe(prep_data) |>
+    fit(data) |>
+    tidy() |>
+    bind_rows(ridge_ests) -> ridge_ests
+}
+
+# visualize estimated coefficients for each lambda
+ridge_ests |>
+  filter(term != "(Intercept)") |>
+  ggplot() +
+  labs(title = "Ridge Regression: Coefficient Estimates vs Penalty") +
+  geom_line(aes(penalty, estimate, group = term, colour = term)) +
+  coord_trans(x = "log10")
+```
+
+# Ridge Regression
+
+Using 10-fold cross-validation, I found the lambda with the highest ROC-AUC value of 0.887 was lambda = 0.0933
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# perform 10-fold cross validation, estimate roc_auc for each lambda
+data_10foldcv <- vfold_cv(data, v = 10)
+
+ridge_spec <- logistic_reg(mixture = 0, penalty = tune("lambda")) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+
+workflow() |>
+  add_model(ridge_spec) |>
+  add_recipe(prep_data) |>
+  tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> ridge_tune
+
+# determine best lambda
+
+ridge_metrics <- ridge_tune |>
+  collect_metrics() |>
+  filter(.metric == "roc_auc") |>
+  mutate(method = "Ridge")
+
+ridge_best <- show_best(ridge_tune, metric = "roc_auc", n = 1)
+
+ridge_tune |>
+  collect_metrics() |>
+  dplyr::select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  labs(title = "Ridge Regression: roc_auc vs lambda") +
+  geom_line(aes(lambda, roc_auc)) + 
+  geom_point(aes(lambda, roc_auc)) +
+  geom_point(aes(ridge_best$lambda, ridge_best$mean), color = "red", shape = 1, size = 4) +
+  coord_trans(x = "log10")
+```
+
+# Lasso
+
+Lasso shows a steeper dropoff of coefficient estimates as a result of feature reduction
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# fit lasso model for each lambda
+lasso_ests <- data.frame()
+for(lam in lambda) {
+  lasso_spec <- logistic_reg(mixture = 1, penalty = lam) |>
+    set_mode("classification") |>
+    set_engine("glmnet")
+  
+    workflow() |>
+    add_model(lasso_spec) |>
+    add_recipe(prep_data) |>
+    fit(data) |>
+    tidy() |>
+    bind_rows(lasso_ests) -> lasso_ests
+}
+
+# visualize estimated coefficients for each lambda
+lasso_ests |>
+  filter(term != "(Intercept)") |>
+  ggplot() +
+  labs(title = "Lasso Method: Coefficient Estimates vs Penalty") +
+  geom_line(aes(penalty, estimate, group = term, colour = term)) +
+  coord_trans(x = "log10")
+```
+
+# Lasso
+
+Using 10-fold cross validation, I found the lambda with the highest ROC-AUC value of 0.886 was lambda = 0.01
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# perform 10-fold cross validation, estimate roc_auc for each lambda
+lasso_spec <- logistic_reg(mixture = 1, penalty = tune("lambda")) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+
+workflow() |>
+  add_model(lasso_spec) |>
+  add_recipe(prep_data) |>
+  tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> lasso_tune
+
+lasso_metrics <- lasso_tune |>
+  collect_metrics() |>
+  filter(.metric == "roc_auc") |>
+  mutate(method = "Lasso")
+
+lasso_best <- show_best(lasso_tune, metric = "roc_auc", n = 1)
+
+# show best lambda with lasso
+lasso_tune |>
+  collect_metrics() |>
+  dplyr::select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  geom_line(aes(lambda, roc_auc)) +
+  labs(title = "Lasso Method: ROC-AUC vs Lambda") +
+  geom_point(aes(lambda, roc_auc)) +
+  geom_point(aes(lasso_best$lambda, lasso_best$mean), color = "red", shape = 1, size = 4) +
+  coord_trans(x = "log10")
+```
+
+# Results
+
+- No Regularization:
+
+- Ridge Regression:
+
+- Lasso:
+
+
+# SVM (Paige)
+
+- Predicting Death Event 
+- Like our Linear Regression methods we began by splitting the data into training and test data. 
+- I began by assessing the support variables and determining the acurracy of the model. 
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(42)
+scaled_data <- data
+library(e1071)             
+split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
+train_data <- subset(scaled_data, split == TRUE)
+test_data <- subset(scaled_data, split == FALSE)
+
+svm_model <- svm(DEATH_EVENT ~ ., data = train_data, kernel = "radial", cost = 1, scale = TRUE)
+
+
+summary(svm_model)
+
+predictions <- predict(svm_model, test_data)
+
+conf_matrix <- table(Predicted = predictions, Actual = test_data$DEATH_EVENT)
+print(conf_matrix)
+
+accuracy <- sum(predictions == test_data$DEATH_EVENT) / length(predictions)
+print(paste("Accuracy: ", round(accuracy, 3)))
+
+```
+
+- Accuracy is 81.7% which details our predictive model should be fairly sound. 
+
+
+
+# SVM Model
+
+```{r}
+svm_data <- scaled_data[, c("age", "serum_creatinine", "DEATH_EVENT")]
+
+svm_model_2d <- svm(DEATH_EVENT ~ age + serum_creatinine, data = svm_data, kernel = "radial")
+
+x_range <- seq(min(svm_data$age) - 1, max(svm_data$age) + 1, length.out = 100)
+y_range <- seq(min(svm_data$serum_creatinine) - 1, max(svm_data$serum_creatinine) + 1, length.out = 100)
+grid <- expand.grid(age = x_range, serum_creatinine = y_range)
+
+predictions_grid <- predict(svm_model_2d, grid)
+
+ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
+  geom_point(alpha = 0.7, size = 3) +
+  geom_tile(data = grid, 
+            aes(x = age, y = serum_creatinine, 
+                fill = predictions_grid), 
+            alpha = 0.3) +
+  scale_fill_manual(values = c("red", "blue")) +
+  scale_color_manual(values = c("red", "blue")) +
+  theme_minimal() +
+  labs(title = "SVM Decision Boundary", x = "Age", y = "Serum Creatinine") +
+  theme(legend.position = "none")
+
+```
+
+- The SVM Boundry demonstrates that 
+
+
+
+
+
+# Random Forest (paige)
+
+
+
 # Results (Paige)
+
+# References 
+
+Davide Chicco, Giuseppe Jurman: Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. BMC Medical Informatics and Decision Making 20, 16 (2020). https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5 
