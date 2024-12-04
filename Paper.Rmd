@@ -157,7 +157,7 @@ workflow() |>
 
 ridge_tune |>
   collect_metrics() |>
-  select(lambda, .metric, mean) |>
+  dplyr::select(lambda, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   ggplot() +
   labs(title = "Ridge Regression: roc_auc vs lambda") +
@@ -181,7 +181,7 @@ ridge_best <- show_best(ridge_tune, metric = "roc_auc", n = 1)
 
 ridge_tune |>
   collect_metrics() |>
-  select(lambda, .metric, mean) |>
+  dplyr::select(lambda, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   ggplot() +
   labs(title = "Ridge Regression: roc_auc vs lambda") +
