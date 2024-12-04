@@ -32,7 +32,7 @@ For our project, we aimed to create a model that can predict the event of death 
 
 # Logistic Regression (Witlie)
 
-Logistic regression was an obvious first choice in tackling this binary classification problem. We created 3 models to assess predictive performance with different regularization methods.
+Logistic regression was an obvious first choice in tackling this binary classification problem. I created 3 models to assess predictive performance with different regularization methods.
 
 - Ridge Regression
 - Lasso
@@ -101,7 +101,7 @@ ridge_ests |>
 
 # Ridge Regression
 
-Using 10-fold cross-validation, we found the lambda with the highest ROC-AUC value of 0.887 was lambda = 0.0933
+Using 10-fold cross-validation, I found the lambda with the highest ROC-AUC value of 0.887 was lambda = 0.0933
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
@@ -168,7 +168,7 @@ lasso_ests |>
 
 # Lasso
 
-Using 10-fold cross validation, we found the lambda with the highest ROC-AUC value of 0.886 was lambda = 0.01
+Using 10-fold cross validation, I found the lambda with the highest ROC-AUC value of 0.886 was lambda = 0.01
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
