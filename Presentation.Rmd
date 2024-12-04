@@ -293,7 +293,7 @@ lasso_tune |>
 - Lasso:
 
 
-# SVM (Paige)
+# SVM
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 set.seed(42)
@@ -346,6 +346,24 @@ ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
 ```
 
 - The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. We can see that overall serium creatinine has little effect on the death effect especially in males. Meanwhile age and serum creatinine has a large response on females.
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+conf_matrix <- table(Predicted = predictions, Actual = test_data$DEATH_EVENT)
+
+conf_matrix_df <- as.data.frame(conf_matrix)
+
+ggplot(conf_matrix_df, aes(x = Predicted, y = Actual, fill = Freq)) + 
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "white", size = 8) +
+  scale_fill_gradient(low = "white", high = "blue") +
+  labs(title = "Confusion Matrix", x = "Predicted", y = "Actual") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 12), axis.text.y = element_text(size = 12))
+
+```
+
+- Confusion Matrix is used to quantify our model's predictions, we can see the majority of true labels correctly matched with the predicted labels, indicating a high degree of accuracy.
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
