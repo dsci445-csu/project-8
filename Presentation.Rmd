@@ -28,6 +28,9 @@ knitr::opts_chunk$set(echo = FALSE)
 
 # SVM (Paige)
 
+- Predicting Death Event 
+- Like our Linear Regression methods we began by splitting the data into training and test data. 
+- I began by assessing the support variables and determining the acurracy of the model. 
 
 # Random Forest (paige)
 
