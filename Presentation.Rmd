@@ -11,7 +11,25 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-# Introduction (Witlie)
+
+```{r, include = FALSE}
+library(caTools) 
+library(randomForest) 
+library(e1071) 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(MASS)
+library(GGally)
+library(tidymodels)
+library(ISLR)
+library(class)
+library(reshape2)
+library(pROC)
+```
+
+## Introduction (Witlie)
 
 For our project, we aimed to create a model that can predict the event of death as a result of heart failure from clinical patient data.
 
@@ -29,6 +47,71 @@ For our project, we aimed to create a model that can predict the event of death 
 
 # Linearity and Normality (Neha)
 
+Normality
+
+- Objective: Assess whether continuous predictor variables are normally distributed.
+
+- Variables analyzed:
+Age, Creatinine Phosphokinase, Ejection Fraction, Platelets, Serum Creatinine, Serum Sodium.
+
+
+- Testing residuals ensures the model fits the data well and detects patterns that might indicate a need for model improvement.
+
+- Tests performed: 
+
+Shapiro-Wilk Test:
+p-values < 0.05 for all variables → None follow a normal distribution.
+
+# Graphs
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+# Select a few continuous variables
+selected_vars <- c("age", "serum_creatinine")
+
+# Set up the plotting area to display two histograms and two Q-Q plots on one slide
+par(mfrow = c(2, 2)) # 2 rows and 2 columns
+
+# Loop through the selected variables to create histograms and Q-Q plots
+for (var in selected_vars) {
+  
+  # Histogram for the selected variable
+  hist(data[[var]], main = paste("Histogram of", var), 
+       xlab = var, col = "skyblue", border = "white")
+  
+  # Q-Q Plot for the selected variable
+  qqnorm(data[[var]], main = paste("Q-Q Plot of", var))
+  qqline(data[[var]], col = "red")
+}
+
+
+```
+
+
+# Linearity 
+
+- Scatterplots of each variable vs. DEATH_EVENT:
+
+- Fitted linear trendlines show non linear relationships for most variables.
+
+- Logistic regression results:
+Predictor variables (e.g., Age, Serum Creatinine) significantly linked to DEATH_EVENT likelihood.
+Residual deviance was low, suggesting a good fit.
+
+
+# Graphs 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+model <- glm(DEATH_EVENT ~ age + serum_creatinine + ejection_fraction, data=data, family=binomial)
+
+fitted_values <- fitted(model)
+residuals <- residuals(model, type="pearson")
+plot(fitted_values, residuals, main="Residuals vs Fitted Values", xlab="Fitted Values", ylab="Residuals")
+abline(h=0, col="red")
+
+```
+
+
+# SVM & Random Forest (Paige)
 
 # Logistic Regression (Witlie)
 
@@ -214,7 +297,8 @@ lasso_tune |>
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 set.seed(42)
-
+scaled_data <- data
+library(e1071)             
 split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
 train_data <- subset(scaled_data, split == TRUE)
 test_data <- subset(scaled_data, split == FALSE)
