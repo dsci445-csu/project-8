@@ -384,9 +384,78 @@ print(paste("Accuracy: ", round(accuracy, 3)))
 From this code we conclude that there are only 13 predictive variables we should consider. We also considered the accuracy of how the SVM model this allows us to understand its predictive capabilities.  We also conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions.  
 
 
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+svm_data <- scaled_data[, c("age", "serum_creatinine", "DEATH_EVENT")]
+
+svm_model_2d <- svm(DEATH_EVENT ~ age + serum_creatinine, data = svm_data, kernel = "radial")
+
+x_range <- seq(min(svm_data$age) - 1, max(svm_data$age) + 1, length.out = 100)
+y_range <- seq(min(svm_data$serum_creatinine) - 1, max(svm_data$serum_creatinine) + 1, length.out = 100)
+grid <- expand.grid(age = x_range, serum_creatinine = y_range)
+
+predictions_grid <- predict(svm_model_2d, grid)
+
+ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
+  geom_point(alpha = 0.7, size = 3) +
+  geom_tile(data = grid, 
+            aes(x = age, y = serum_creatinine, 
+                fill = predictions_grid), 
+            alpha = 0.3) +
+  scale_fill_manual(values = c("red", "blue")) +
+  scale_color_manual(values = c("red", "blue")) +
+  theme_minimal() +
+  labs(title = "SVM Decision Boundary", x = "Age", y = "Serum Creatinine") +
+  theme(legend.position = "none")
+
+```
+
+- The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. We can see that overall serium creatinine has little effect on the death effect especially in males. Meanwhile age and serum creatinine has a large response on females.
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+svm_probs <- attr(predict(svm_model, test_data, decision.values = TRUE), "decision.values")
+
+roc_curve <- roc(test_data$DEATH_EVENT, svm_probs)
+plot(roc_curve, col = "blue", main = "ROC Curve for SVM Model")
+
+```
+
+- The SVM model, tuned with `C = 0.5` and `sigma = 0.0562`, had an ROC of 0.86, a sensitivity of 86%, and a specificity of 66%.
+
+
 #### Random Forest
 
 Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also robust to overfitting, particularly compared to individual decision trees, and provides a built-in estimate of model performance through out-of-bag error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+rf_predictions <- predict(rf_model, test_data)
+
+conf_matrix <- table(Predicted = rf_predictions, Actual = test_data$DEATH_EVENT)
+print(conf_matrix)
+
+accuracy <- sum(rf_predictions == test_data$DEATH_EVENT) / length(rf_predictions)
+cat("Accuracy: ", round(accuracy, 3))
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+rf_probs <- predict(rf_model, test_data, type = "prob")[, 2] 
+roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
+
+plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
+
+```
+
+
+
+- The Random Forest model performed best with `mtry = 2`, giving an ROC of 0.91. It was effective at identifying true positives (91% sensitivity) but had a moderate specificity of 69%.
+
+- Overall, the Random Forest model performed better, especially in terms of overall accuracy and detecting positive cases.
+
 
 <<<<<<< HEAD
 
