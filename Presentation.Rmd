@@ -57,10 +57,13 @@ Age, Creatinine Phosphokinase, Ejection Fraction, Platelets, Serum Creatinine, S
 
 - Testing residuals ensures the model fits the data well and detects patterns that might indicate a need for model improvement.
 
+- Most variables were either right or left skewed, showing low normality, except for platelets and serum sodium, which were closer to normal
+
 - Tests performed: 
 
 Shapiro-Wilk Test:
 p-values < 0.05 for all variables → None follow a normal distribution.
+
 
 # Graphs
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -110,6 +113,11 @@ abline(h=0, col="red")
 
 ```
 
+## Polynomial Model to Test Linearity
+
+- Polynomial models allow us to model nonlinear relationships between predictors and the outcome
+
+-  The polynomial model identified several significant predictors of the likelihood of a death event, including age, serum creatinine, ejection fraction, and time. However, many other predictors, such as platelets, serum sodium, and factors like anaemia, diabetes, and smoking, were found to be statistically insignificant
 
 # SVM & Random Forest (Paige)
 
