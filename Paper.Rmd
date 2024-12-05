@@ -452,6 +452,7 @@ plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
 
 
 
+
 - The Random Forest model performed best with `mtry = 2`, giving an ROC of 0.91. It was effective at identifying true positives (91% sensitivity) but had a moderate specificity of 69%.
 
 - Overall, the Random Forest model performed better, especially in terms of overall accuracy and detecting positive cases.
