@@ -410,7 +410,8 @@ plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
 
 - None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data.
 - The SVM model provided more insight in making predictions however still wasn't the best option. 
-- The Random Forest provides a sound approach to prediction as they use multiple trees and reduce risk of overfitting. 
+- The Random Forest provides a sound approach to prediction as they use multiple trees and reduce risk of overfitting. This also contains the highest accuracy score with an ROC Curve that confirms it's true positive rate is the highest among it's competitors. 
+-Thank you!
 
 
 # References 
