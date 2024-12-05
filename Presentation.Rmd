@@ -380,6 +380,44 @@ plot(roc_curve, col = "blue", main = "ROC Curve for SVM Model")
 # Random Forest (paige)
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(445)
+
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+sum(is.na(data))
+
+data <- na.omit(data)
+
+data$DEATH_EVENT <- as.factor(data$DEATH_EVENT)
+
+scaled_data <- data
+scaled_data[, -which(names(data) == "DEATH_EVENT")] <- scale(data[, -which(names(data) == "DEATH_EVENT")])
+
+
+set.seed(120)  
+classifier_RF = randomForest(x = train[-5], 
+                             y = train$age, 
+                             ntree = 500)
+y_pred = predict(classifier_RF, newdata = test[-5])
+confusion_mtx = table(test[, 5], y_pred) 
+
+set.seed(42)
+
+split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
+train_data <- subset(scaled_data, split == TRUE)
+test_data <- subset(scaled_data, split == FALSE)
+
+rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 3, importance = TRUE)
+
+set.seed(42)
+
+split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
+train_data <- subset(scaled_data, split == TRUE)
+test_data <- subset(scaled_data, split == FALSE)
+
+
+rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 2, importance = TRUE)
+
 rf_predictions <- predict(rf_model, test_data)
 
 conf_matrix <- table(Predicted = rf_predictions, Actual = test_data$DEATH_EVENT)
