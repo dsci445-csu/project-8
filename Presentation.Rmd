@@ -47,7 +47,7 @@ For our project, we aimed to create a model that can predict the event of death 
 
 # Linearity and Normality 
 
-Normality
+Normalityh
 
 - Objective: Assess whether continuous predictor variables are normally distributed.
 
