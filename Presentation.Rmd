@@ -122,13 +122,13 @@ grid()
 
 # Logistic Regression 
 
-Logistic regression was an obvious first choice in tackling this binary classification problem. I created 3 models to assess predictive performance with different regularization methods.
+To begin tackling this binary classification problem, we first turned to logistic regression. We created 3 models to assess predictive performance with different regularization methods.
 
+- Logistic Regression with no regularization
 - Ridge Regression
 - Lasso
-- No regularization
 
-# Ridge Regression
+# Logistic Regression Estimates
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -138,6 +138,7 @@ library(tidymodels)
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
+library(kableExtra)
 
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 
@@ -159,6 +160,43 @@ test_data <- testing(data_split)
 
 prep_data <- recipe(DEATH_EVENT ~ ., data = train_data)
 
+# fit logistic regression model 
+logistic_spec_glm <- logistic_reg(penalty = NULL) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_logistic_workflow_glm <- workflow() %>%
+  add_model(logistic_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_logistic_model_glm <- fit(final_logistic_workflow_glm, data = train_data)
+
+# extract p-values from model
+logistic_glm_fit <- final_logistic_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = logistic_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = logistic_glm_fit$coefficients[, "Std. Error"],
+  `p value` = logistic_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px")
+
+```
+
+Significant Features: age, ejection fraction, serum creatine, time
+
+# Ridge Regression
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # create vector of 100 lambda values from 0.01 to 10^10
 lambda <- lambda <- 10^seq(-2, 10, length.out = 100)
 tune_df <- data.frame(lambda = lambda)
@@ -192,7 +230,7 @@ ridge_ests |>
 
 # Ridge Regression
 
-Using 10-fold cross-validation, I found the lambda with the highest ROC-AUC value of 0.887 was lambda = 0.0933
+Using 10-fold cross-validation, we found the lambda with the highest ROC-AUC value of 0.887 was lambda = 0.0933
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
@@ -228,6 +266,45 @@ ridge_tune |>
   coord_trans(x = "log10")
 ```
 
+# Ridge Regression Estimates
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+best_ridge_lambda <- show_best(ridge_tune, metric = "roc_auc", n = 1)$lambda
+
+# fit ridge regression model 
+ridge_spec_glm <- logistic_reg(penalty = best_ridge_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_ridge_workflow_glm <- workflow() %>%
+  add_model(ridge_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_ridge_model_glm <- fit(final_ridge_workflow_glm, data = train_data)
+
+# extract p-values from model
+ridge_glm_fit <- final_ridge_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = ridge_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = ridge_glm_fit$coefficients[, "Std. Error"],
+  `p value` = ridge_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px")
+```
+
+Significant Features: age, ejection fraction, serum creatine, time
+
 # Lasso
 
 Lasso shows a steeper dropoff of coefficient estimates as a result of feature reduction
@@ -259,7 +336,7 @@ lasso_ests |>
 
 # Lasso
 
-Using 10-fold cross validation, I found the lambda with the highest ROC-AUC value of 0.886 was lambda = 0.01
+Using 10-fold cross validation, we found the lambda with the highest ROC-AUC value of 0.886 was lambda = 0.01
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
@@ -292,14 +369,64 @@ lasso_tune |>
   coord_trans(x = "log10")
 ```
 
+# Lasso Estimates
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+best_lasso_lambda <- show_best(lasso_tune, metric = "roc_auc", n = 1)$lambda
+
+# fit lasso model 
+lasso_spec_glm <- logistic_reg(penalty = best_lasso_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_lasso_workflow_glm <- workflow() %>%
+  add_model(lasso_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_lasso_model_glm <- fit(final_lasso_workflow_glm, data = train_data)
+
+# extract p-values from model
+lasso_glm_fit <- final_lasso_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = lasso_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = lasso_glm_fit$coefficients[, "Std. Error"],
+  `p value` = lasso_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px")
+```
+
+Significant Features: age, ejection fraction, serum creatine, time
+
 # Results
 
-- No Regularization: 
+All Models found the same 4 predictor variables significantly correlated to the response.
 
-- Ridge Regression:
+No Regularization
+- ROC_AUC = 0.145	
+- Accuracy = 0.833
 
-- Lasso:
+Ridge Regression
+- ROC_AUC = 0.144		
+- Accuracy = 0.8
 
+Lasso
+- ROC_AUC = 0.134	
+- Accuracy = 0.833
+
+Very similar performance metrics. Regularization appears to be unnecessary for this data set.
+Low ROC-AUC values indicate poor discrimination ability.
+It is likely that accuracy is being driven up erroneously by predictions being assigned to the majority class. 
 
 # Support Vector Machine
 
@@ -328,7 +455,7 @@ print(paste("Accuracy: ", round(accuracy, 3)))
 
 # SVM Descision Boundry 
 
-The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. We can see that overall serium creatinine has little effect on the death effect especially in males. Meanwhile age and serum creatinine has a large response on females.
+The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. We can see that overall serum creatinine has little effect on the death effect especially in males. Meanwhile age and serum creatinine has a large response on females.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(4, 2)}
 svm_data <- scaled_data[, c("age", "serum_creatinine", "DEATH_EVENT")]
