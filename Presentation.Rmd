@@ -113,7 +113,7 @@ abline(h=0, col="red")
 
 ```
 
-## Polynomial Model to Test Linearity
+# Polynomial Model to Test Linearity
 
 - Polynomial models allow us to model nonlinear relationships between predictors and the outcome
 
