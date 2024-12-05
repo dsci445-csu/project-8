@@ -69,20 +69,15 @@ p-values < 0.05 for all variables → None follow a normal distribution.
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 
-# Select a few continuous variables
 selected_vars <- c("age", "serum_creatinine")
 
-# Set up the plotting area to display two histograms and two Q-Q plots on one slide
 par(mfrow = c(2, 2)) # 2 rows and 2 columns
 
-# Loop through the selected variables to create histograms and Q-Q plots
 for (var in selected_vars) {
   
-  # Histogram for the selected variable
   hist(data[[var]], main = paste("Histogram of", var), 
        xlab = var, col = "skyblue", border = "white")
   
-  # Q-Q Plot for the selected variable
   qqnorm(data[[var]], main = paste("Q-Q Plot of", var))
   qqline(data[[var]], col = "red")
 }
@@ -95,21 +90,27 @@ for (var in selected_vars) {
 
 - Linearity assumes a straight-line relationship between the predictor variables and the log odds of the outcome in logistic regression
 
-- Fitted linear trendlines show non linear relationships for most variables.
+- Fitted linear trendlines show linear relationships for most variables.
 
 - Logistic regression results:
 
-The residuals exhibit a curved pattern, indicating that the relationship between the predictors and the response variable may not be linear.
+The residuals exhibit no pattern, indicating that the relationship between the predictors and the response variable is pretty linear. 
 
 
 # Graphs 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-model <- glm(DEATH_EVENT ~ age + serum_creatinine + ejection_fraction, data=data, family=binomial)
+model <- lm(time ~ age, data = data)
 
 fitted_values <- fitted(model)
-residuals <- residuals(model, type="pearson")
-plot(fitted_values, residuals, main="Residuals vs Fitted Values", xlab="Fitted Values", ylab="Residuals")
-abline(h=0, col="red")
+residuals <- resid(model)
+
+plot(fitted_values, residuals, 
+     main = "Residuals vs. Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     pch = 19, col = "blue")
+abline(h = 0, col = "red", lty = 2) 
+grid()
 
 ```
 
@@ -117,7 +118,7 @@ abline(h=0, col="red")
 
 - Polynomial models allow us to model nonlinear relationships between predictors and the outcome
 
--  The polynomial model identified several significant predictors of the likelihood of a death event, including age, serum creatinine, ejection fraction, and time. However, many other predictors, such as platelets, serum sodium, and factors like anaemia, diabetes, and smoking, were found to be statistically insignificant
+-  The polynomial model identified several significant predictors of the likelihood of a death event, including age, serum creatinine, ejection fraction, and time. However, there were other factors like anaemia, diabetes, and smoking, were found to be statistically insignificant
 
 # Logistic Regression 
 
