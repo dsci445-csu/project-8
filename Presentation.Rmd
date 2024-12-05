@@ -90,13 +90,13 @@ for (var in selected_vars) {
 
 # Linearity 
 
-- Scatterplots of each variable vs. DEATH_EVENT:
+- Linearity assumes a straight-line relationship between the predictor variables and the log odds of the outcome in logistic regression
 
 - Fitted linear trendlines show non linear relationships for most variables.
 
 - Logistic regression results:
-Predictor variables (e.g., Age, Serum Creatinine) significantly linked to DEATH_EVENT likelihood.
-Residual deviance was low, suggesting a good fit.
+
+The residuals exhibit a curved pattern, indicating that the relationship between the predictors and the response variable may not be linear.
 
 
 # Graphs 

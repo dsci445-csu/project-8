@@ -57,10 +57,30 @@ abline(h=0, col="red")
 ```
 
 
+
 ```{r}
-library(ggplot2)
-model <- glm(DEATH_EVENT ~ ., data = data, family = binomial)
-model
+data$log_odds <- predict(model, type = "link")  # 'link' gives log-odds
+
+continuous_vars <- c("age", "serum_creatinine", "ejection_fraction", 
+                     "creatinine_phosphokinase", "platelets", "serum_sodium", "time")
+
+par(mfrow = c(3, 2)) # Set grid for multiple plots
+for (var in continuous_vars) {
+  plot(data[[var]], data$log_odds,
+       main = paste(var, "vs Log-Odds"),
+       xlab = var, ylab = "Log-Odds", col = "blue", pch = 19)
+  abline(lm(data$log_odds ~ data[[var]]), col = "red")  # Add a linear trendline
+}
+
+
+poly_model <- glm(DEATH_EVENT ~ poly(age, 2) + poly(serum_creatinine, 2) +
+                  poly(ejection_fraction, 2) + poly(creatinine_phosphokinase, 2) +
+                  poly(platelets, 2) + poly(serum_sodium, 2) + poly(time, 2) +
+                  anaemia + diabetes + high_blood_pressure + sex + smoking,
+                  family = binomial, data = data)
+
+summary(poly_model)
+
 ```
 
 ## For all variables tested, the Shapiro-Wilk test produced p-values below 0.05, meaning none of these variables follow a normal distribution
