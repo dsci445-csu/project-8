@@ -320,7 +320,7 @@ print(paste("Accuracy: ", round(accuracy, 3)))
 
 The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. We can see that overall serium creatinine has little effect on the death effect especially in males. Meanwhile age and serum creatinine has a large response on females.
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(3, 3)}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(4, 2)}
 svm_data <- scaled_data[, c("age", "serum_creatinine", "DEATH_EVENT")]
 
 svm_model_2d <- svm(DEATH_EVENT ~ age + serum_creatinine, data = svm_data, kernel = "radial")
@@ -350,7 +350,7 @@ ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
 
 The Confusion Matrix is used to support our model's predictions, we can see the majority of true labels correctly matched with the predicted labels, indicating high accuracy.
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(3, 3)}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(4, 2)}
 conf_matrix <- table(Predicted = predictions, Actual = test_data$DEATH_EVENT)
 
 conf_matrix_df <- as.data.frame(conf_matrix)
@@ -369,7 +369,7 @@ ggplot(conf_matrix_df, aes(x = Predicted, y = Actual, fill = Freq)) +
 
 The SVM model, tuned with `C = 0.5` and `sigma = 0.0562`, had an ROC of 0.86, a sensitivity of 86%, and a specificity of 66%.
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(3, 3)}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(4, 2)}
 svm_probs <- attr(predict(svm_model, test_data, decision.values = TRUE), "decision.values")
 
 roc_curve <- roc(test_data$DEATH_EVENT, svm_probs)
@@ -441,7 +441,7 @@ cat("Accuracy: ", round(accuracy, 3))
 
 The Random Forest model performed best with `mtry = 2`, giving an ROC of 0.91. It was effective at identifying true positives (91% sensitivity) but had a moderate specificity of 69%.
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(3, 3)}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(4, 2)}
 
 rf_probs <- predict(rf_model, test_data, type = "prob")[, 2] 
 roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
@@ -453,7 +453,7 @@ plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
 Overall, the Random Forest model performed better, especially in terms of overall accuracy and detecting positive cases.
 
 
-# Results (Paige)
+# Results
 
 - None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data.
 
