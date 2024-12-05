@@ -121,6 +121,7 @@ Logistic regression was an obvious first choice in tackling this binary classifi
 
 # Ridge Regression
 
+
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 set.seed(445)
 
