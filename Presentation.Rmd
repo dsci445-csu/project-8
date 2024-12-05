@@ -390,6 +390,12 @@ data <- na.omit(data)
 
 data$DEATH_EVENT <- as.factor(data$DEATH_EVENT)
 
+split <- sample.split(data, SplitRatio = 0.7) 
+
+
+train <- subset(data, split == "TRUE") 
+test <- subset(data, split == "FALSE") 
+
 scaled_data <- data
 scaled_data[, -which(names(data) == "DEATH_EVENT")] <- scale(data[, -which(names(data) == "DEATH_EVENT")])
 
