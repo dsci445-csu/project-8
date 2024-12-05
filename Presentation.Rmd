@@ -294,7 +294,7 @@ lasso_tune |>
 
 # Results
 
-- No Regularization: hey whats up 
+- No Regularization: 
 
 - Ridge Regression:
 
