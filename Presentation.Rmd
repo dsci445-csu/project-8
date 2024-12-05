@@ -365,7 +365,7 @@ ggplot(conf_matrix_df, aes(x = Predicted, y = Actual, fill = Freq)) +
 
 ```
 
-#SVM ROC Curve
+# SVM ROC Curve
 
 The SVM model, tuned with `C = 0.5` and `sigma = 0.0562`, had an ROC of 0.86, a sensitivity of 86%, and a specificity of 66%.
 
