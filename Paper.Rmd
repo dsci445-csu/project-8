@@ -416,7 +416,7 @@ print(lasso_metrics)
 Support Vector Machines (SVMs) are primarily binary classifiers. When dealing with more than two classes, SVMs can handle multi-class classification by applying techniques like "one-vs-one" or "one-vs-all," where multiple binary classifications are combined. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handels linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships, which our data is. We decided to use SVM as our data wasn't completely normally distributed or linear. Earlier we established age,  ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables had deviations. We also found that all p-values were below 0.05, indicating that none of the variables followed a normal distribution. Using this information we were able to confirm age and serum creatinine were associated with the likelihood of death. Because of this I decided to use age and serum creatinine as our main points of analysis.
 
 
-We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. We started by spliting the data into training set, with 80% of the data, and test set, with 20% of our data. We also tuned the SVM model with `C = 0.5` and `sigma = 0.0562`, inorder to produce our best results. 
+We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. We started by splitting the data into training set, with 80% of the data, and test set, with 20% of our data. We also tuned the SVM model with `C = 0.5` and `sigma = 0.0562`, inorder to produce our best results. 
 
 
 
@@ -508,7 +508,7 @@ Using all of the information concluded from this model we can see that it overal
 
 Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also robust to overfitting, particularly compared to individual decision trees, and provides a built-in estimate of model performance through out-of-bag error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
 
-We decided to use this model as our data was not perfectly linear and had normality issues. 
+We decided to use this model as our data was not perfectly linear and had normality issues. We began by splitting the data into training set, with 80% of the data, and test set, with 20% of our data. We found that we should use an Mtry=6 to preform best. 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 set.seed(445)
@@ -561,7 +561,7 @@ train_data <- subset(scaled_data, split == TRUE)
 test_data <- subset(scaled_data, split == FALSE)
 
 
-rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 2, importance = TRUE)
+rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 6, importance = TRUE)
 
 rf_predictions <- predict(rf_model, test_data)
 
@@ -571,6 +571,9 @@ print(conf_matrix)
 accuracy <- sum(rf_predictions == test_data$DEATH_EVENT) / length(rf_predictions)
 cat("Accuracy: ", round(accuracy, 3))
 ```
+
+
+Using the information above we found the dimensions of both the training data and testing data. We also broke down the rf_model accuracy of each variable for the model. We also looked into each Mtry and what the OOB error of each would be. Finally we found the confusion matrix and the accuracy of the overall model. The confusion matrix quantifies the model's predictions using this we saw the majority of true labels correctly matched with the predicted labels, indicating high accuracy.  We also found an accuracy score 0.9 from our random forest model. This indicates that our model should offer 90% true positive predictions. Inorder to confirm these results we performed a ROC curve.
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -583,81 +586,9 @@ plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
 ```
 
 
-
-# Random Forest
-
-We began by finding the accuracy and a prediction matrix
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-set.seed(445)
-
-data <- read.csv("heart_failure_clinical_records_dataset.csv")
-
-sum(is.na(data))
-
-data <- na.omit(data)
-
-data$DEATH_EVENT <- as.factor(data$DEATH_EVENT)
-
-split <- sample.split(data, SplitRatio = 0.7) 
-
-
-train <- subset(data, split == "TRUE") 
-test <- subset(data, split == "FALSE") 
-
-scaled_data <- data
-scaled_data[, -which(names(data) == "DEATH_EVENT")] <- scale(data[, -which(names(data) == "DEATH_EVENT")])
-
-
-set.seed(120)  
-classifier_RF = randomForest(x = train[-5], 
-                             y = train$age, 
-                             ntree = 500)
-y_pred = predict(classifier_RF, newdata = test[-5])
-confusion_mtx = table(test[, 5], y_pred) 
-
-set.seed(42)
-
-split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
-train_data <- subset(scaled_data, split == TRUE)
-test_data <- subset(scaled_data, split == FALSE)
-
-rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 3, importance = TRUE)
-
-set.seed(42)
-
-split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
-train_data <- subset(scaled_data, split == TRUE)
-test_data <- subset(scaled_data, split == FALSE)
-
-
-rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 2, importance = TRUE)
-
-rf_predictions <- predict(rf_model, test_data)
-
-conf_matrix <- table(Predicted = rf_predictions, Actual = test_data$DEATH_EVENT)
-print(conf_matrix)
-
-accuracy <- sum(rf_predictions == test_data$DEATH_EVENT) / length(rf_predictions)
-cat("Accuracy: ", round(accuracy, 3))
-```
-
-# RF ROC Curve
-
-The Random Forest model performed best with `mtry = 2`, giving an ROC of 0.91. It was effective at identifying true positives (91% sensitivity) but had a moderate specificity of 69%.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(4, 2)}
-
-rf_probs <- predict(rf_model, test_data, type = "prob")[, 2] 
-roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
-
-plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
-
-```
+With the ROC Curve graph above we found a 0.91 rate. It indicated a 91% sensitivity rate indicating 91% true positive rate. However, this model has a moderate specifity with a 69% rate. 
 
 Overall, the Random Forest model performed better, especially in terms of overall accuracy and detecting positive cases.
-
-
 
 
 
