@@ -422,6 +422,22 @@ We began with our SVM model looking to the Support Vectors and the parameters of
 
 ```{r, echo=FALSE, include=FALSE}
 
+library(caTools) 
+library(randomForest) 
+library(e1071) 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(MASS)
+library(GGally)
+library(tidymodels)
+library(ISLR)
+library(class)
+library(reshape2)
+library(pROC)
+
+
 set.seed(445)
 
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
