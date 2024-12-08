@@ -22,7 +22,7 @@ campaigns. The main objective is to transform this raw data into meaningful conc
 
 # Methodology
 
-#### Exploratory Analysis 
+## Exploratory Analysis 
 
 Before applying machine learning models, we began by performing an exploratory analysis of the data. This 
 included assessing the linearity and normality of the predictors, identifying any outliers, and exploring 
@@ -31,18 +31,33 @@ understand the spread of each feature, and scatter plots to check the relationsh
 variables and the target variable (mortality). This helped us determine whether the data required 
 transformations before applying machine learning techniques.
 
+### Linearity and Normality 
 
+In this analysis, we begin by testing the normality of several continuous variables in the dataset, including 
+age, creatinine phosphokinase, ejection fraction, platelets, serum creatinine, and serum sodium. First, we 
+used histograms and Q-Q plots to visually inspect the distribution of these variables. The histograms for most
+variables indicated skewness, either to the right or left, suggesting that these variables do not follow a 
+normal distribution. Platelets and serum sodium appeared to be the most normally distributed, but even they 
+showed some deviation from normality. The Q-Q plots confirmed these observations, showing that age, 
+ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables 
+exhibited greater deviations.
+
+To check the normality of the continuous variables, we performed the Shapiro-Wilk test, and all p-values were 
+below 0.05, indicating that none of the variables followed a normal distribution.
+
+We then examined the relationship between these variables and the binary outcome, DEATH_EVENT, using scatter 
+plots with linear regression lines. These plots showed that variables like age and serum creatinine were 
+somewhat associated with the likelihood of death, showing linear trends in most cases. Logistic regression 
+models confirmed that many of the variables, such as age and serum creatinine, were significantly related to 
+the risk of death.
 
 #### Logistic Regression with Regularization
 
-
-
 Logistic regression is a go-to method for binary classification, and we explored three versions to analyze 
 predictive performance. First, we fit a basic logistic regression model without regularization as a baseline. 
-While simple, it doesn't handle collinearity or irrelevant predictors. Next, we applied Ridge regression regularization, 
+While simple, it doesn't handle collinearity or irrelevant predictors. Next, we applied ridge regression regularization, 
 which penalizes large coefficients to stabilize the model, though it doesn't eliminate predictors, making it 
-less interpretable than Lasso. Finally, we used Lasso regularization, which not only penalizes coefficients, but also performs feature selection by shrinking some to zero, improving interpretability. Comparing their 
-predictive power helps determine which approach balances accuracy and simplicity best.
+less interpretable than Lasso. Finally, we used Lasso regularization, which not only penalizes coefficients, but also performs feature selection by shrinking some to zero, improving interpretability. Comparing their predictive power helps determine which approach balances accuracy and simplicity best.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 set.seed(445)
@@ -50,6 +65,8 @@ set.seed(445)
 library(tidymodels)
 library(tidyverse)
 library(ggplot2)
+library(dplyr)
+library(kableExtra)
 
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 
@@ -64,11 +81,7 @@ data[need_scale] <- scale(data[need_scale])
 # convert DEATH_EVENT to a factor 
 data <- data %>%
   mutate(DEATH_EVENT = factor(DEATH_EVENT, levels = c("0", "1")))
-```
 
-Because the predictor variables are of varying ranges and units, we began by scaling all continuous features to prevent our regularization techniques from over-penalizing variables with larger ranges. Next, we split our data into a training set (containing 80% of the data) and a test set (containing 20%) so that we could assess the performance of our logistic regression models using cross validation.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # split data into training set (80%) and test set (20%)
 data_split <- initial_split(data, prop = 0.8)
 train_data <- training(data_split)
@@ -77,36 +90,45 @@ test_data <- testing(data_split)
 prep_data <- recipe(DEATH_EVENT ~ ., data = train_data)
 ```
 
-Once this setup was complete, we created our first logistic regression model with no regularization. The metrics we used to assess the performance of these models are roc_auc, which is the area under the receiver-operating characteristic (ROC) curve that represents the probability that the model will correctly rank a randomly selected positive example higher than a negative one, as well as accuracy, which is the proportion of correct predictions out of all total predictions. Below are the roc_auc and accuracy values of the first logistic regression model with no regularization:
+Because the predictor variables are of varying ranges and units, we began by scaling all continuous features to prevent our regularization techniques from over-penalizing variables with larger ranges. Next, we split our data into a training set (containing 80% of the data) and a test set (containing 20%) so that we could assess the performance of our logistic regression models using 10-fold cross validation.
 
-```{r,echo=FALSE, warning=FALSE}
-# fit logistic regression model
-logistic_spec <- logistic_reg(penalty = 0) %>%
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# fit logistic regression model 
+logistic_spec_glm <- logistic_reg(penalty = NULL) %>%
   set_mode("classification") %>%
-  set_engine("glmnet")
+  set_engine("glm")
 
-final_logistic_workflow <- workflow() %>%
-  add_model(logistic_spec) %>%
+final_logistic_workflow_glm <- workflow() %>%
+  add_model(logistic_spec_glm) %>%
   add_recipe(prep_data)
 
-final_logistic_model <- fit(final_logistic_workflow, data = train_data)
+final_logistic_model_glm <- fit(final_logistic_workflow_glm, data = train_data)
 
-# evaluate logistic model on test set
-logistic_predictions <- predict(final_logistic_model, test_data, type = "prob") %>%
-  bind_cols(test_data) %>%
-  # creating pred_class column by converting probabilities into class predictions
-  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+# extract p-values from model
+logistic_glm_fit <- final_logistic_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
 
-logistic_metrics <- roc_auc(logistic_predictions, truth = DEATH_EVENT, .pred_1) %>%
-  bind_rows(accuracy(logistic_predictions, truth = DEATH_EVENT, .pred_class))
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = logistic_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = logistic_glm_fit$coefficients[, "Std. Error"],
+  `p value` = logistic_glm_fit$coefficients[, "Pr(>|z|)"]
+)
 
-# print logistic model metrics
-print(logistic_metrics)
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px") %>%
+  kable_styling(latex_options = "hold_position")
 ```
 
-The logistic regression model with no regularization gave an roc_auc value of 0.1325 and an accuracy value of 0.8333. This accuracy value is fairly high, but the roc_auc value is very low, which indicates poor performance.
+The logistic regression model found that four predictors displayed significance: age, ejection fraction, serum creatine, and time.
 
-Next, we created a logistic regression model including ridge regression regularization. We determined the optimal lambda penalty value using cross validation.
+Next, we created a logistic regression model with ridge regression regularization. We determined the optimal lambda penalty value using 10-fold cross validation.
 
 ```{r,echo=FALSE, warning=FALSE, message=FALSE}
 # create vector of 100 lambda values from 0.01 to 10^10
@@ -140,7 +162,9 @@ ridge_ests |>
   coord_trans(x = "log10")
 ```
 
-This graph depicts the estimated value of each coefficient corresponding to each feature for each lambda value tested. As the penalty lambda value increases, the coefficient estimates diminish towards zero without being removed entirely.
+The graph above depicts the estimated value of each coefficient for each lambda value tested. As the lambda penalty value increases, the coefficient estimates gradually diminish towards zero without being removed entirely.
+
+The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best lambda to be *INSERT LAMBDA* 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
@@ -155,22 +179,7 @@ workflow() |>
   add_recipe(prep_data) |>
   tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> ridge_tune
 
-ridge_tune |>
-  collect_metrics() |>
-  dplyr::select(lambda, .metric, mean) |>
-  pivot_wider(names_from = .metric, values_from = mean) |>
-  ggplot() +
-  labs(title = "Ridge Regression: roc_auc vs lambda") +
-  geom_line(aes(lambda, roc_auc)) + 
-  geom_point(aes(lambda, roc_auc)) +
-  coord_trans(x = "log10")
-```
-
-This graph depicts the roc_auc value for each lambda tested. A higher roc_auc value indicates better performance, and we can see there is a significant and sudden drop in roc_auc value after approximately the first third of lambda values. After completing cross validation, we can see which lambda value demonstrates the best performance: 
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # determine best lambda
-show_best(ridge_tune, metric = "roc_auc", n = 1)
 
 ridge_metrics <- ridge_tune |>
   collect_metrics() |>
@@ -187,11 +196,163 @@ ridge_tune |>
   labs(title = "Ridge Regression: roc_auc vs lambda") +
   geom_line(aes(lambda, roc_auc)) + 
   geom_point(aes(lambda, roc_auc)) +
-  geom_point(aes(ridge_best$lambda, ridge_best$mean), color = "red") +
+  geom_point(aes(ridge_best$lambda, ridge_best$mean), color = "red", shape = 1, size = 4) +
   coord_trans(x = "log10")
 ```
 
-Once we have chosen the optimal penalty, we can fit the ridge regression model with this lambda value and assess its performance with roc_auc and accuracy metrics:
+Once we have chosen the optimal penalty, we can fit the ridge regression model with this lambda value and view its estimates.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+best_ridge_lambda <- show_best(ridge_tune, metric = "roc_auc", n = 1)$lambda
+
+# fit ridge regression model 
+ridge_spec_glm <- logistic_reg(penalty = best_ridge_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_ridge_workflow_glm <- workflow() %>%
+  add_model(ridge_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_ridge_model_glm <- fit(final_ridge_workflow_glm, data = train_data)
+
+# extract p-values from model
+ridge_glm_fit <- final_ridge_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = ridge_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = ridge_glm_fit$coefficients[, "Std. Error"],
+  `p value` = ridge_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px") %>%
+  kable_styling(latex_options = "hold_position")
+```
+
+The ridge regression model found the same four predictor variables significant as the logistic regression model without regularization: age, ejection fraction, serum creatine, and time. The coefficient estimates and p-values are overall very similar to those of the first logistic regression model. 
+
+For our final logistic regression model, we will implement lasso, once again using 10-fold cross validation to determine the optimal lambda penalty value. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# fit lasso model for each lambda
+lasso_ests <- data.frame()
+for(lam in lambda) {
+  lasso_spec <- logistic_reg(mixture = 1, penalty = lam) |>
+    set_mode("classification") |>
+    set_engine("glmnet")
+  
+    workflow() |>
+    add_model(lasso_spec) |>
+    add_recipe(prep_data) |>
+    fit(data) |>
+    tidy() |>
+    bind_rows(lasso_ests) -> lasso_ests
+}
+
+# visualize estimated coefficients for each lambda
+lasso_ests |>
+  filter(term != "(Intercept)") |>
+  ggplot() +
+  labs(title = "Lasso Method: Coefficient Estimates vs Penalty") +
+  geom_line(aes(penalty, estimate, group = term, colour = term)) +
+  coord_trans(x = "log10")
+```
+
+In the graph above, we can see the coefficient estimates diminish towards zero as lambda increases. The reduction in coefficient estimates is notably steeper for lasso than with ridge regression. Unlike ridge regression, lasso performs feature selection by driving some coefficients to equal zero, thus eliminating them from the model. 
+
+The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best lambda to be *INSERT LAMBDA*
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# perform 10-fold cross validation, estimate roc_auc for each lambda
+lasso_spec <- logistic_reg(mixture = 1, penalty = tune("lambda")) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+
+workflow() |>
+  add_model(lasso_spec) |>
+  add_recipe(prep_data) |>
+  tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> lasso_tune
+
+lasso_metrics <- lasso_tune |>
+  collect_metrics() |>
+  filter(.metric == "roc_auc") |>
+  mutate(method = "Lasso")
+
+lasso_best <- show_best(lasso_tune, metric = "roc_auc", n = 1)
+
+# show best lambda with lasso
+lasso_tune |>
+  collect_metrics() |>
+  dplyr::select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  geom_line(aes(lambda, roc_auc)) +
+  labs(title = "Lasso Method: ROC-AUC vs Lambda") +
+  geom_point(aes(lambda, roc_auc)) +
+  geom_point(aes(lasso_best$lambda, lasso_best$mean), color = "red", shape = 1, size = 4) +
+  coord_trans(x = "log10")
+```
+
+Now with our chosen penalty, we can fit the lasso model with this lambda value and view its estimates.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+best_lasso_lambda <- show_best(lasso_tune, metric = "roc_auc", n = 1)$lambda
+
+# fit lasso model 
+lasso_spec_glm <- logistic_reg(penalty = best_lasso_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_lasso_workflow_glm <- workflow() %>%
+  add_model(lasso_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_lasso_model_glm <- fit(final_lasso_workflow_glm, data = train_data)
+
+# extract p-values from model
+lasso_glm_fit <- final_lasso_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = lasso_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = lasso_glm_fit$coefficients[, "Std. Error"],
+  `p value` = lasso_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px") %>%
+  kable_styling(latex_options = "hold_position")
+```
+
+The lasso model again found the same four predictor variables significant as both the logistic regression and ridge regression models: age, ejection fraction, serum creatine, and time. The coefficient estimates and p-values are again very similar to those of the logistic regression and ridge regression models.
+
+Because the ridge regression model and the lasso model resulted in estimates very similar to those of the logistic model without regularization, this indicates that regularization was likely unnecessary for our data set. 
+
+Now we will investigate the predictive performance of our three logistic regression models. The metrics we used to assess the performance of these models are ROC-AUC---the area under the receiver-operating characteristic (ROC) curve that represents the probability that the model will correctly rank a randomly selected positive example higher than a negative one---as well as accuracy, which is the proportion of correct predictions out of all total predictions.
+
+*REFORMAT OUTPUTS BELOW*
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# print logistic model metrics
+#print(logistic_metrics)
+```
+
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # finalize ridge with best lambda
@@ -219,86 +380,6 @@ ridge_metrics <- roc_auc(ridge_predictions, truth = DEATH_EVENT, .pred_1) %>%
 print(ridge_metrics)
 ```
 
-The logistic regression model with ridge regression regularization gave an roc_auc value of 0.1374 and an accuracy value of 0.8333. These values are nearly identical to those of the logistic model with no regularization.
-
-For our final logistic regression model, we will implement lasso, once again using cross validation to determine the optimal lambda penalty value.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-# fit lasso model for each lambda
-lasso_ests <- data.frame()
-for(lam in lambda) {
-  lasso_spec <- logistic_reg(mixture = 1, penalty = lam) |>
-    set_mode("classification") |>
-    set_engine("glmnet")
-  
-    workflow() |>
-    add_model(lasso_spec) |>
-    add_recipe(prep_data) |>
-    fit(data) |>
-    tidy() |>
-    bind_rows(lasso_ests) -> lasso_ests
-}
-
-# visualize estimated coefficients for each lambda
-lasso_ests |>
-  filter(term != "(Intercept)") |>
-  ggplot() +
-  labs(title = "Lasso Method: Coefficient Estimates vs Penalty") +
-  geom_line(aes(penalty, estimate, group = term, colour = term)) +
-  coord_trans(x = "log10")
-```
-
-Here we can see the coefficient estimates reduce towards zero as lambda increases. The reduction in coefficient estimates is notably steeper for lasso than with ridge regression. Unlike ridge regression, lasso performs feature selection by driving some coefficients to equal zero, thus eliminating them. 
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-# perform 10-fold cross validation, estimate roc_auc for each lambda
-lasso_spec <- logistic_reg(mixture = 1, penalty = tune("lambda")) |>
-  set_mode("classification") |>
-  set_engine("glmnet")
-
-workflow() |>
-  add_model(lasso_spec) |>
-  add_recipe(prep_data) |>
-  tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> lasso_tune
-
-lasso_tune |>
-  collect_metrics() |>
-  select(lambda, .metric, mean) |>
-  pivot_wider(names_from = .metric, values_from = mean) |>
-  ggplot() +
-  labs(title = "Lasso Method: roc_auc vs lambda") +
-  geom_line(aes(lambda, roc_auc)) +
-  geom_point(aes(lambda, roc_auc)) +
-  coord_trans(x = "log10")
-```
-
-We can see in the graph above a significant and sudden drop in roc_auc value after the first dozen lambda values. After completing cross validation, we can see which lambda value demonstrates the best performance:
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-show_best(lasso_tune, metric = "roc_auc", n = 1)
-
-lasso_metrics <- lasso_tune |>
-  collect_metrics() |>
-  filter(.metric == "roc_auc") |>
-  mutate(method = "Lasso")
-
-lasso_best <- show_best(lasso_tune, metric = "roc_auc", n = 1)
-
-# show best lambda with lasso
-lasso_tune |>
-  collect_metrics() |>
-  select(lambda, .metric, mean) |>
-  pivot_wider(names_from = .metric, values_from = mean) |>
-  ggplot() +
-  geom_line(aes(lambda, roc_auc)) +
-  labs(title = "Lasso Method: roc_auc vs lambda") +
-  geom_point(aes(lambda, roc_auc)) +
-  geom_point(aes(lasso_best$lambda, lasso_best$mean), color = "red") +
-  coord_trans(x = "log10")
-```
-
-Again, once we have chosen the optimal penalty, we can fit the lasso model with this lambda value and assess its performance with roc_auc and accuracy metrics:
-
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # finalize lasso with best lambda
 best_lasso_lambda <- show_best(lasso_tune, metric = "roc_auc", n = 1)$lambda
@@ -325,30 +406,8 @@ lasso_metrics <- roc_auc(lasso_predictions, truth = DEATH_EVENT, .pred_1) %>%
 print(lasso_metrics)
 ```
 
-The logistic regression model with ridge regression regularization gave an roc_auc value of 0.1027 and an accuracy value of 0.850. These values are again nearly identical to those of the logistic model with no regularization and the logisitic model with ridge regression. The lasso model provided the highest accuracy of the three models, but also an even lower roc_auc value. 
 
-
-
-## Linearity and Normality 
-
-In this analysis, we begin by testing the normality of several continuous variables in the dataset, including 
-age, creatinine phosphokinase, ejection fraction, platelets, serum creatinine, and serum sodium. First, we 
-used histograms and Q-Q plots to visually inspect the distribution of these variables. The histograms for most
-variables indicated skewness, either to the right or left, suggesting that these variables do not follow a 
-normal distribution. Platelets and serum sodium appeared to be the most normally distributed, but even they 
-showed some deviation from normality. The Q-Q plots confirmed these observations, showing that age, 
-ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables 
-exhibited greater deviations.
-
-To check the normality of the continuous variables, we performed the Shapiro-Wilk test, and all p-values were 
-below 0.05, indicating that none of the variables followed a normal distribution.
-
-We then examined the relationship between these variables and the binary outcome, DEATH_EVENT, using scatter 
-plots with linear regression lines. These plots showed that variables like age and serum creatinine were 
-somewhat associated with the likelihood of death, showing linear trends in most cases. Logistic regression 
-models confirmed that many of the variables, such as age and serum creatinine, were significantly related to 
-the risk of death.
-
+*DISCUSS RESULTS*
 
 
 #### Support Vector Machine
@@ -400,9 +459,9 @@ predictions_grid <- predict(svm_model_2d, grid)
 
 ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
   geom_point(alpha = 0.7, size = 3) +
-  geom_tile(data = grid, 
-            aes(x = age, y = serum_creatinine, 
-                fill = predictions_grid), 
+  geom_tile(data = grid,
+            aes(x = age, y = serum_creatinine,
+                fill = predictions_grid),
             alpha = 0.3) +
   scale_fill_manual(values = c("red", "blue")) +
   scale_color_manual(values = c("red", "blue")) +
@@ -443,7 +502,7 @@ cat("Accuracy: ", round(accuracy, 3))
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
-rf_probs <- predict(rf_model, test_data, type = "prob")[, 2] 
+rf_probs <- predict(rf_model, test_data, type = "prob")[, 2]
 roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
 
 plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
@@ -462,7 +521,7 @@ plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
 =======
 # Results
 
-None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data. Roc_auc values of 0.10 - 0.13 indicate that the model is performing worse than chance (0.5). A low roc_auc value indicates poor discrimination ability. Having a high accuracy value with a low roc_auc value might suggest that accuracy is being misleadingly driven up by the model assigning predictions to the majority class (in our case, death event = 0). 
+None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data. ROC-AUC values of 0.10 - 0.13 indicate that the model is performing worse than chance (0.5). A low ROC-AUC value indicates poor discrimination ability. Having a high accuracy value with a low ROC-AUC value might suggest that accuracy is being misleadingly driven up by the model assigning predictions to the majority class (in our case, death event = 0). 
 >>>>>>> 06e66d4c39f850846dcef0b1529f6760960600e5
 
 # References
