@@ -433,6 +433,18 @@ It is likely that accuracy is being driven up erroneously by predictions being a
 We began by finding the accuracy rating of 81.7% and a prediction matrix
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+set.seed(445)
+
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+data <- na.omit(data)
+
+data$DEATH_EVENT <- as.factor(data$DEATH_EVENT)
+
+scaled_data <- data
+scaled_data[, -which(names(data) == "DEATH_EVENT")] <- scale(data[, -which(names(data) == "DEATH_EVENT")])
+
 set.seed(42)
 scaled_data <- data
 library(e1071)             
