@@ -416,7 +416,7 @@ print(lasso_metrics)
 Support Vector Machines (SVMs) are primarily binary classifiers. When dealing with more than two classes, SVMs can handle multi-class classification by applying techniques like "one-vs-one" or "one-vs-all," where multiple binary classifications are combined. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handels linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships, which our data is. We decided to use SVM as our data wasn't completely normally distributed or linear. Earlier we established age,  ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables had deviations. We also found that all p-values were below 0.05, indicating that none of the variables followed a normal distribution. Using this information we were able to confirm age and serum creatinine were associated with the likelihood of death. Because of this I decided to use age and serum creatinine as our main points of analysis.
 
 
-We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. We started by spliting the data into training set, with 80% of the data, and test set, with 20% of our data.
+We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. We started by spliting the data into training set, with 80% of the data, and test set, with 20% of our data. We also tuned the SVM model with `C = 0.5` and `sigma = 0.0562`, inorder to produce our best results. 
 
 
 
@@ -454,10 +454,8 @@ print(paste("Accuracy: ", round(accuracy, 3)))
 
 ```
 
-From this code we conclude that there are only 13 predictive variables we should consider. We also considered the accuracy of the SVM model this allows us to understand its predictive capabilities.  We also conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions.  
 
-
-
+From this code we conclude that there are only 13 predictive variables we should consider. We also considered the accuracy of the SVM model this allows us to understand its predictive capabilities.  We conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions.  Using this information we decided to look into a SVM Descision Boundry. 
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -485,7 +483,11 @@ ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
 
 ```
 
-- The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. We can see that overall serium creatinine has little effect on the death effect especially in males. Meanwhile age and serum creatinine has a large response on females.
+
+The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. The Red of the grpah represents the Male populations, meanwhile Blue represents the Female population. Overall, serium creatinine and age has little effect on the death effect in males. Meanwhile age and serum creatinine has a large response on females. 
+
+
+Finally, to confirm and quantity these results we performed a Receiver Operator Characteristic, a ROC curve is a plot used to show the diagnostic ability of binary classifiers. A ROC curve plots the true positive rate (TPR) against the false positive rate (FPR). In the graph below we analyize the Death Effect and the overall true positive rate of this model.
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -496,7 +498,7 @@ plot(roc_curve, col = "blue", main = "ROC Curve for SVM Model")
 
 ```
 
-- The SVM model, tuned with `C = 0.5` and `sigma = 0.0562`, had an ROC of 0.86, a sensitivity of 86%, and a specificity of 66%.
+Using this graph we can see a ROC Curve of 0.86. This graph demonstrated the Death effect from the SVM Model had a sensitivity of 86%, and a specificity of 66%. Indicating a True Positive rate of 86 and a False Positive Rate of 66.
 
 
 #### Random Forest
