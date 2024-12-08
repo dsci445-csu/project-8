@@ -5,6 +5,11 @@ date: "2024-11-20"
 ---
 ## Standardize Data 
 ```{r}
+library(tidymodels)
+library(tidyverse)
+library(ggplot2)
+library(knitr)
+
 set.seed(445)
 
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
@@ -56,6 +61,68 @@ print(logistic_metrics)
 ```
 
 The logistic regression model with no regularization has a roc_auc of 0.133 and an accuracy of 0.833. 
+
+```{r}
+library(tidymodels)
+library(kableExtra)
+
+# Fit logistic regression model with stats::glm
+logistic_spec_glm <- logistic_reg(penalty = NULL) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_logistic_workflow_glm <- workflow() %>%
+  add_model(logistic_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_logistic_model_glm <- fit(final_logistic_workflow_glm, data = train_data)
+
+# Extract p-values from model
+logistic_glm_fit <- final_logistic_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# Create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = logistic_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = logistic_glm_fit$coefficients[, "Std. Error"],
+  `p value` = logistic_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# Display p-values
+p_values_df %>%
+  kbl(caption = "Logistic Regression Coefficients and P-values", digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "400px")
+```
+
+```{r}
+# display odds ratios, confidence intervals for odds ratios, and p-values
+# didn't end up using this
+
+logistic_glm <- glm(DEATH_EVENT ~ ., data = train_data, family = binomial)
+
+coef_summary <- summary(logistic_glm)$coefficients
+p_values <- coef_summary[, 4]
+
+odds_ratios <- exp(coef(logistic_glm))
+conf_int <- exp(confint(logistic_glm))
+
+results_df <- data.frame(
+  Odds_Ratio = odds_ratios,
+  Lower_CI = conf_int[, 1],
+  Upper_CI = conf_int[, 2],
+  P_Value = p_values)
+
+results_df %>%
+  arrange(P_Value) %>%
+  knitr::kable(
+    caption = "Logistic Regression Results",
+    digits = 3,
+    align = "c")
+```
+
 
 ## Ridge Regression
 ```{r}
@@ -195,6 +262,7 @@ print(ridge_best)
 lasso_best <- show_best(lasso_tune, metric = "roc_auc", n = 1)
 print(lasso_best)
 ```
+
 ```{r, warning=FALSE}
 # show best lambda with ridge regression
 ridge_tune |>
@@ -276,3 +344,72 @@ print(ridge_metrics)
 print(lasso_metrics)
 ```
 Ridge regression model has a higher roc_auc of 0.137, but a lower accuracy of 0.833 compared to the Lasso model with a roc_auc of 0.103 and accuracy of 0.850. All of these values are very similar to that of the logistic model with no regularization.
+
+```{r}
+# Ridge Regression Estimates
+
+# fit ridge regression model 
+ridge_spec_glm <- logistic_reg(penalty = best_ridge_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_ridge_workflow_glm <- workflow() %>%
+  add_model(ridge_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_ridge_model_glm <- fit(final_ridge_workflow_glm, data = train_data)
+
+# extract p-values from model
+ridge_glm_fit <- final_ridge_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = ridge_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = ridge_glm_fit$coefficients[, "Std. Error"],
+  `p value` = ridge_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px")
+```
+
+```{r}
+# Lasso Estimates
+
+# fit lasso model 
+lasso_spec_glm <- logistic_reg(penalty = best_lasso_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_lasso_workflow_glm <- workflow() %>%
+  add_model(lasso_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_lasso_model_glm <- fit(final_lasso_workflow_glm, data = train_data)
+
+# extract p-values from model
+lasso_glm_fit <- final_lasso_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = lasso_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = lasso_glm_fit$coefficients[, "Std. Error"],
+  `p value` = lasso_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px")
+```
+
