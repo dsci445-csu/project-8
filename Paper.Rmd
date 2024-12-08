@@ -501,11 +501,14 @@ plot(roc_curve, col = "blue", main = "ROC Curve for SVM Model")
 Using this graph we can see a ROC Curve of 0.86. This graph demonstrated the Death effect from the SVM Model had a sensitivity of 86%, and a specificity of 66%. Indicating a True Positive rate of 86 and a False Positive Rate of 66.
 
 
+Using all of the information concluded from this model we can see that it overall performed better than any of the logistic regression approaches. However, I wanted to try one more approach so I began Random Forest. 
+
+
 #### Random Forest
 
 Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also robust to overfitting, particularly compared to individual decision trees, and provides a built-in estimate of model performance through out-of-bag error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
 
-We decided to use this model as our data 
+We decided to use this model as our data was not perfectly linear and had normality issues. 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 set.seed(445)
@@ -576,93 +579,6 @@ rf_probs <- predict(rf_model, test_data, type = "prob")[, 2]
 roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
 
 plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
-
-```
-
-
-# Support Vector Machine
-
-We began by finding the accuracy rating of 81.7% and a prediction matrix
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-set.seed(42)
-scaled_data <- data
-library(e1071)             
-split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
-train_data <- subset(scaled_data, split == TRUE)
-test_data <- subset(scaled_data, split == FALSE)
-
-svm_model <- svm(DEATH_EVENT ~ ., data = train_data, kernel = "radial", cost = 1, scale = TRUE)
-
-predictions <- predict(svm_model, test_data)
-
-conf_matrix <- table(Predicted = predictions, Actual = test_data$DEATH_EVENT)
-print(conf_matrix)
-
-accuracy <- sum(predictions == test_data$DEATH_EVENT) / length(predictions)
-print(paste("Accuracy: ", round(accuracy, 3)))
-
-```
-
-
-# SVM Descision Boundry 
-
-The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. We can see that overall serum creatinine has little effect on the death effect especially in males. Meanwhile age and serum creatinine has a large response on females.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(4, 2)}
-svm_data <- scaled_data[, c("age", "serum_creatinine", "DEATH_EVENT")]
-
-svm_model_2d <- svm(DEATH_EVENT ~ age + serum_creatinine, data = svm_data, kernel = "radial")
-
-x_range <- seq(min(svm_data$age) - 1, max(svm_data$age) + 1, length.out = 100)
-y_range <- seq(min(svm_data$serum_creatinine) - 1, max(svm_data$serum_creatinine) + 1, length.out = 100)
-grid <- expand.grid(age = x_range, serum_creatinine = y_range)
-
-predictions_grid <- predict(svm_model_2d, grid)
-
-ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
-  geom_point(alpha = 0.7, size = 3) +
-  geom_tile(data = grid, 
-            aes(x = age, y = serum_creatinine, 
-                fill = predictions_grid), 
-            alpha = 0.3) +
-  scale_fill_manual(values = c("red", "blue")) +
-  scale_color_manual(values = c("red", "blue")) +
-  theme_minimal() +
-  labs(title = "SVM Decision Boundary", x = "Age", y = "Serum Creatinine") +
-  theme(legend.position = "none")
-
-```
-
-
-# SVM Confusion Matrix
-
-The Confusion Matrix is used to support our model's predictions, we can see the majority of true labels correctly matched with the predicted labels, indicating high accuracy.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(4, 2)}
-conf_matrix <- table(Predicted = predictions, Actual = test_data$DEATH_EVENT)
-
-conf_matrix_df <- as.data.frame(conf_matrix)
-
-ggplot(conf_matrix_df, aes(x = Predicted, y = Actual, fill = Freq)) + 
-  geom_tile() +
-  geom_text(aes(label = Freq), color = "white", size = 8) +
-  scale_fill_gradient(low = "white", high = "blue") +
-  labs(title = "Confusion Matrix", x = "Predicted", y = "Actual") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(size = 12), axis.text.y = element_text(size = 12))
-
-```
-
-# SVM ROC Curve
-
-The SVM model, tuned with `C = 0.5` and `sigma = 0.0562`, had an ROC of 0.86, a sensitivity of 86%, and a specificity of 66%.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim = c(4, 2)}
-svm_probs <- attr(predict(svm_model, test_data, decision.values = TRUE), "decision.values")
-
-roc_curve <- roc(test_data$DEATH_EVENT, svm_probs)
-plot(roc_curve, col = "blue", main = "ROC Curve for SVM Model")
 
 ```
 
