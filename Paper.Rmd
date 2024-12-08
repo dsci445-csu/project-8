@@ -31,7 +31,7 @@ understand the spread of each feature, and scatter plots to check the relationsh
 variables and the target variable (mortality). This helped us determine whether the data required 
 transformations before applying machine learning techniques.
 
-### Linearity and Normality 
+## Linearity and Normality 
 
 In this analysis, we begin by testing the normality of several continuous variables in the dataset, including 
 age, creatinine phosphokinase, ejection fraction, platelets, serum creatinine, and serum sodium. First, we 
@@ -51,7 +51,7 @@ somewhat associated with the likelihood of death, showing linear trends in most 
 models confirmed that many of the variables, such as age and serum creatinine, were significantly related to 
 the risk of death.
 
-#### Logistic Regression with Regularization
+## Logistic Regression
 
 Logistic regression is a go-to method for binary classification, and we explored three versions to analyze 
 predictive performance. First, we fit a basic logistic regression model without regularization as a baseline. 
@@ -410,7 +410,7 @@ print(lasso_metrics)
 *DISCUSS RESULTS*
 
 
-#### Support Vector Machine
+## Support Vector Machine
 
 
 Support Vector Machines (SVMs) are binary classifiers. When dealing with more than two classes, SVMs can handle multi-class classification by applying techniques like "one-vs-one" or "one-vs-all," where multiple binary classifications are combined. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handels linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships. We decided to use SVM as our data wasn't completely normally distributed or linear. Earlier we established age, ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables had deviations. We also found that all p-values were below 0.05, indicating that none of the variables followed a normal distribution. Using this information we were able to confirm age and serum creatinine were associated with the likelihood of death. Because of this I decided to use age and serum creatinine as our main points of analysis.
@@ -520,7 +520,7 @@ Using this we can see a ROC Curve of 0.86. This graph demonstrated the Death eff
 Using all of the information concluded from this model we can see that it overall performed better than any of the logistic regression approaches. However, I wanted to try one more approach so I began Random Forest. 
 
 
-#### Random Forest
+## Random Forest
 
 Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also good for overfitting, compared to individual decision trees, and provides a built-in estimate of model performance through error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
 
@@ -607,18 +607,12 @@ With the ROC Curve graph above we found a 0.91 rate. It indicated a 91% sensitiv
 Overall, the Random Forest model performed better, especially in terms of overall accuracy and detecting positive cases.
 
 
-
-<<<<<<< HEAD
-
-=======
 # Results
 
 None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data. ROC-AUC values of 0.10 - 0.13 indicate that the model is performing worse than chance (0.5). A low ROC-AUC value indicates poor discrimination ability. Having a high accuracy value with a low ROC-AUC value might suggest that accuracy is being misleadingly driven up by the model assigning predictions to the majority class (in our case, death event = 0). 
 
 Performing both SVM and Random Forest we were able to conclude our best model was Random Forest. Our SVM held a high accuracy rating and a high ROC-AUC value indicating it would be a good prediction model for our data. However, once we tested the accuracy and ROC-AUC of Random Forest we can see this highly outranks any other options. This model performs the best overall with the predictions to the majority class death event = 0. 
 
-
->>>>>>> 06e66d4c39f850846dcef0b1529f6760960600e5
 
 # References
 
