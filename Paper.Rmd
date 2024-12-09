@@ -32,17 +32,27 @@ fraction, serum creatinine, and co-existing conditions like diabetes and high bl
 data, researchers can uncover patterns that contribute to better understanding the progression of heart
 failure.
 
-The main motivation for our group to study this dataset is to dive a little bit deeper into which factors affect 
-heart failure. Knowing that heart failure is a leading cause of death around the world, finding meaningful 
-patterns can inform public health strategies, such as targeted lifestyle modifications or health care 
-campaigns. The main objective is to transform this raw data into meaningful conclusions on heart disease. 
+The main motivation for our group to study this dataset is to dive a little bit deeper into which factors 
+affectheart failure. Knowing that heart failure is a leading cause of death around the world, finding 
+meaningful patterns can inform public health strategies, such as targeted lifestyle modifications or health 
+carecampaigns. The main objective is to transform this raw data into meaningful conclusions on heart disease. 
 
-# Methodology
+
+# Variables
 
 In our project, we aimed to develop a predictive model to determine the likelihood of death resulting from
 heart failure using clinical patient data. The binary response variable, “DEATH_EVENT,” indicates whether
 a patient has died (value of 1) or survived (value of 0). The dataset includes 12 risk factor variables, 
-comprising of 5 binary variables—anemia status, diabetes status, high blood pressure status, sex, and smoking status—and 7 numerical variables, including age, creatine phosphokinase level, ejection fraction, platelet concentration, serum creatinine level, serum sodium level, and the length of the follow-up period.
+comprising of 5 binary variables—anemia status, diabetes status, high blood pressure status, sex, and smoking 
+status—and 7 numerical variables, including age, creatine phosphokinase level, ejection fraction, platelet 
+concentration, serum creatinine level, serum sodium level, and the length of the follow-up period.
+
+Creatine phosphokinase (CPK) is an enzyme found in the blood that indicates tissue stress, often used to 
+assess muscle or heart injury. Ejection fraction refers to the percentage of blood the heart pumps with each 
+contraction, crucial for evaluating heart function. Platelet concentration is the number of platelets in a 
+unit of blood, important for clotting. Serum creatinine measures creatinine levels in the blood, helping 
+assess kidney function, with high levels indicating possible kidney issues. Serum sodium tests the 
+concentration of sodium in the blood, vital for nerve and muscle function and fluid balance.
 
 ## Exploratory Analysis 
 Before applying machine learning models, we began by performing an exploratory analysis of the data. This included assessing the linearity and normality of the predictors, identifying any outliers, and exploring potential correlations among the variables. We visualized distributions using
@@ -94,6 +104,45 @@ pch = 19, col = "blue")
 abline(h = 0, col = "red", lty = 2)
 grid()
 ```
+
+
+## Polynomial Model
+
+```{r}
+data$log_odds <- predict(model, type = "link")  # 'link' gives log-odds
+
+continuous_vars <- c("age", "serum_creatinine", "ejection_fraction", 
+                     "creatinine_phosphokinase", "platelets", "serum_sodium", "time")
+
+par(mfrow = c(3, 2)) # Set grid for multiple plots
+for (var in continuous_vars) {
+  plot(data[[var]], data$log_odds,
+       main = paste(var, "vs Log-Odds"),
+       xlab = var, ylab = "Log-Odds", col = "blue", pch = 19)
+  abline(lm(data$log_odds ~ data[[var]]), col = "red")  # Add a linear trendline
+}
+
+
+poly_model <- glm(DEATH_EVENT ~ poly(age, 2) + poly(serum_creatinine, 2) +
+                  poly(ejection_fraction, 2) + poly(creatinine_phosphokinase, 2) +
+                  poly(platelets, 2) + poly(serum_sodium, 2) + poly(time, 2) +
+                  anaemia + diabetes + high_blood_pressure + sex + smoking,
+                  family = binomial, data = data)
+
+summary(poly_model)
+
+```
+
+The logistic regression model includes polynomial terms for several continuous variables, such as age, serum 
+creatinine, and ejection fraction, to account for non-linear relationships between these predictors and the 
+outcome variable (death event). Using polynomial terms allows the model to capture more complex patterns that 
+a simple linear relationship might miss. For example, the effect of age or serum creatinine on the likelihood 
+of a death event might not be constant, but could change as these variables increase. The polynomial terms 
+help to model this non-linearity, improving the model’s ability to fit the data and providing more accurate 
+predictions. This approach ensures that the relationships between predictors and the outcome are represented 
+more flexibly, which is particularly important when dealing with real-world data that may not always follow 
+linear trends
+
 
 ## Logistic Regression
 
@@ -680,13 +729,16 @@ Performing both SVM and Random Forest we were able to conclude our best model wa
 
 Davide Chicco, Giuseppe Jurman: Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. BMC Medical Informatics and Decision Making 20, 16 (2020). https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5 
 
-Creatine phosphokinase level: measurement of creatine phosphokinase in blood. CPK is an enzyme that indicates tissue stress at high levels https://www.mountsinai.org/health-library/tests/creatine-phosphokinase-test
+Mount Sinai. "Creatine Phosphokinase Test." Mount Sinai Health Library, https://www.mountsinai.org/health-library/tests/creatine-phosphokinase-test.
 
-ejection fraction: how much oxygen-rich blood is pumped out to the body’s organs with each contraction https://my.clevelandclinic.org/health/articles/16950-ejection-fraction
+Cleveland Clinic. "Ejection Fraction." Cleveland Clinic, https://my.clevelandclinic.org/health/articles/16950-ejection-fraction.
 
-platelet concentration: the number of platelets in a unit of blood volume https://www.regenlab.com/2022/04/07/platelet-concentration-concentration-factor/#:~:text=Platelet%20concentration%20is%20the%20number,expressed%20in%20millions%20per%20ml.
+RegenLab. "Platelet Concentration: Concentration Factor." RegenLab, 7 Apr. 2022, https://www.regenlab.com/2022/04/07/platelet-concentration-concentration-factor/#:~:text=Platelet%20concentration%20is%20the%20number,expressed%20in%20millions%20per%20ml.
 
-serum creatine: a measruemnt of the level of creatine in blood which is linked to kidney function https://www.kidneyfund.org/all-about-kidneys/tests/serum-creatinine-test
+Kidney Fund. "Serum Creatinine Test." American Kidney Fund, https://www.kidneyfund.org/all-about-kidneys/tests/serum-creatinine-test.
 
-serum sodium: a measurement of sodium levels in blood https://www.healthline.com/health/sodium-blood#:~:text=A%20sodium%20blood%20test%20is,for%20nerve%20and%20muscle%20function.
+Healthline. "Sodium Blood Test." Healthline, 16 Nov. 2023, https://www.healthline.com/health/sodium-blood#:~:text=A%20sodium%20blood%20test%20is,for%20nerve%20and%20muscle%20function.
+
+ Chicco, Davide, and Giuseppe Jurman. "Machine Learning Can Predict Survival of Patients with Heart Failure from Serum Creatinine and Ejection Fraction Alone." BMC Medical Informatics and Decision Making, vol. 20, no. 16, 2020, https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5.
+
 
