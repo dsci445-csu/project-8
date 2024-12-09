@@ -70,6 +70,27 @@ variables were skewed, except for platelets and serum sodium, which appeared clo
 further supported by Q-Q plots, where variables like age, ejection fraction, serum sodium, and platelets 
 exhibited patterns suggesting near-normality, while others deviated significantly
 
+```{r}
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+continuous_vars <- c("age", "creatinine_phosphokinase", "ejection_fraction", 
+                     "platelets", "serum_creatinine", "serum_sodium")
+
+par(mfrow = c(2, 2)) # Set up a grid for multiple plots
+for (var in continuous_vars) {
+  
+  hist(data[[var]], main = paste("Histogram of", var), xlab = var, col = "skyblue", border = "white")
+  
+  qqnorm(data[[var]], main = paste("Q-Q Plot of", var))
+  qqline(data[[var]], col = "red")
+}
+
+for (var in continuous_vars) {
+  test <- shapiro.test(data[[var]])
+  cat("Shapiro-Wilk test for", var, ":\n")
+  print(test)
+}
+```
 
 Logistic regression analysis showed that predictor variables, such as age and serum creatinine, were 
 significantly associated with the likelihood of a DEATH_EVENT. Residual diagnostics confirmed a good model 
@@ -203,7 +224,14 @@ ridge_ests |>
 
 This graph depicts the estimated value of each coefficient corresponding to each feature for each lambda value tested. As the penalty lambda value increases, the coefficient estimates diminish towards zero without being removed entirely.
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+library(rsample)
+library(parsnip)
+library(tune)
+
+library(yardstick)
+
+library(workflows)
 # perform 10-fold cross validation, estimate roc_auc for each lambda
 data_10foldcv <- vfold_cv(data, v = 10)
 
@@ -231,8 +259,6 @@ This graph depicts the roc_auc value for each lambda tested. A higher roc_auc va
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # determine best lambda
-show_best(ridge_tune, metric = "roc_auc", n = 1)
-
 ridge_metrics <- ridge_tune |>
   collect_metrics() |>
   filter(.metric == "roc_auc") |>
@@ -345,17 +371,19 @@ lasso_metrics <- lasso_tune |>
 
 lasso_best <- show_best(lasso_tune, metric = "roc_auc", n = 1)
 
+
 # show best lambda with lasso
 lasso_tune |>
   collect_metrics() |>
-  select(lambda, .metric, mean) |>
-  pivot_wider(names_from = .metric, values_from = mean) |>
+  dplyr::select(lambda, .metric, mean) |>
+  tidyr::pivot_wider(names_from = .metric, values_from = mean) |>
   ggplot() +
   geom_line(aes(lambda, roc_auc)) +
   labs(title = "Lasso Method: roc_auc vs lambda") +
   geom_point(aes(lambda, roc_auc)) +
-  geom_point(aes(lasso_best$lambda, lasso_best$mean), color = "red") +
+  geom_point(aes(x = lasso_best$lambda, y = lasso_best$mean), color = "red") +
   coord_trans(x = "log10")
+
 ```
 
 Again, once we have chosen the optimal penalty, we can fit the lasso model with this lambda value and assess its performance with roc_auc and accuracy metrics:
@@ -529,4 +557,15 @@ None of the three logistic regression models performed well. The model without r
 
 # References
 
-Davide Chicco, Giuseppe Jurman: Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. BMC Medical Informatics and Decision Making 20, 16 (2020). https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5 
+Davide Chicco, Giuseppe Jurman: Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. 
+
+BMC Medical Informatics and Decision Making 20, 16 (2020). https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5 
+Creatine phosphokinase level: measurement of creatine phosphokinase in blood. CPK is an enzyme that indicates tissue stress at high levels https://www.mountsinai.org/health-library/tests/creatine-phosphokinase-test
+
+ejection fraction: how much oxygen-rich blood is pumped out to the body’s organs with each contraction https://my.clevelandclinic.org/health/articles/16950-ejection-fraction
+
+platelet concentration: the number of platelets in a unit of blood volume https://www.regenlab.com/2022/04/07/platelet-concentration-concentration-factor/#:~:text=Platelet%20concentration%20is%20the%20number,expressed%20in%20millions%20per%20ml.
+
+serum creatine: a measruemnt of the level of creatine in blood which is linked to kidney function https://www.kidneyfund.org/all-about-kidneys/tests/serum-creatinine-test
+
+serum sodium: a measurement of sodium levels in blood https://www.healthline.com/health/sodium-blood#:~:text=A%20sodium%20blood%20test%20is,for%20nerve%20and%20muscle%20function.
