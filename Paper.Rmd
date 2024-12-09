@@ -4,6 +4,27 @@ author: "Paige Galvan, Neha Deshpande, & Witlie Leslie"
 date: "2024-11-25"
 output: pdf_document
 ---
+```{r, include=FALSE}
+library(caTools) 
+library(randomForest) 
+library(e1071) 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(MASS)
+library(GGally)
+library(tidymodels)
+library(ISLR)
+library(class)
+library(reshape2)
+library(pROC)
+```
+
+
+
+
+
 
 # Motivation
 
@@ -57,6 +78,7 @@ substantial improvement, indicating that the relationships between the variables
 primarily linear.
 
 ```{r}
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
 
 model <- lm(time ~ age, data = data)
 
@@ -300,15 +322,15 @@ workflow() |>
   add_recipe(prep_data) |>
   tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> lasso_tune
 
-lasso_tune |>
+lasso_tune |> 
   collect_metrics() |>
-  select(lambda, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   ggplot() +
   labs(title = "Lasso Method: roc_auc vs lambda") +
-  geom_line(aes(lambda, roc_auc)) +
-  geom_point(aes(lambda, roc_auc)) +
+  geom_line(aes(x = lambda, y = roc_auc)) +
+  geom_point(aes(x = lambda, y = roc_auc)) +
   coord_trans(x = "log10")
+
 ```
 
 We can see in the graph above a significant and sudden drop in roc_auc value after the first dozen lambda values. After completing cross validation, we can see which lambda value demonstrates the best performance:
@@ -401,14 +423,13 @@ We began with our SVM model looking to the Support Vectors and the parameters of
 
 ```{r, echo=FALSE, include=FALSE}
 set.seed(42)
-
+scaled_data <- data
+library(e1071)             
 split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
 train_data <- subset(scaled_data, split == TRUE)
 test_data <- subset(scaled_data, split == FALSE)
 
 svm_model <- svm(DEATH_EVENT ~ ., data = train_data, kernel = "radial", cost = 1, scale = TRUE)
-
-summary(svm_model)
 
 predictions <- predict(svm_model, test_data)
 
@@ -417,7 +438,6 @@ print(conf_matrix)
 
 accuracy <- sum(predictions == test_data$DEATH_EVENT) / length(predictions)
 print(paste("Accuracy: ", round(accuracy, 3)))
-
 ```
 
 From this code we conclude that there are only 13 predictive variables we should consider. We also considered the accuracy of how the SVM model this allows us to understand its predictive capabilities.  We also conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions.  
@@ -440,14 +460,14 @@ predictions_grid <- predict(svm_model_2d, grid)
 ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
   geom_point(alpha = 0.7, size = 3) +
   geom_tile(data = grid, 
-            aes(x = age, y = serum_creatinine, 
-                fill = predictions_grid), 
+            aes(x = age, y = serum_creatinine, fill = as.factor(predictions_grid)), 
             alpha = 0.3) +
-  scale_fill_manual(values = c("red", "blue")) +
+  scale_fill_manual(values = c("0" = "red", "1" = "blue")) +
   scale_color_manual(values = c("red", "blue")) +
   theme_minimal() +
   labs(title = "SVM Decision Boundary", x = "Age", y = "Serum Creatinine") +
   theme(legend.position = "none")
+
 
 ```
 
@@ -470,6 +490,8 @@ plot(roc_curve, col = "blue", main = "ROC Curve for SVM Model")
 Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also robust to overfitting, particularly compared to individual decision trees, and provides a built-in estimate of model performance through out-of-bag error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
+rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 3, importance = TRUE)
+
 rf_predictions <- predict(rf_model, test_data)
 
 conf_matrix <- table(Predicted = rf_predictions, Actual = test_data$DEATH_EVENT)
@@ -481,11 +503,12 @@ cat("Accuracy: ", round(accuracy, 3))
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
+rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 3, importance = TRUE)
 
-rf_probs <- predict(rf_model, test_data, type = "prob")[, 2] 
-roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
+ rf_probs <- predict(rf_model, test_data, type = "prob")[, 2] 
+ roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
 
-plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
+ plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
 
 ```
 
