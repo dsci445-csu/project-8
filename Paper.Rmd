@@ -119,7 +119,7 @@ p_values_df <- data.frame(
 
 # display p-values
 p_values_df %>%
-  kbl(digits = 3) %>%
+  kbl(caption = "Logistic Regression Coefficients and P-values", digits = 3) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
   row_spec(0, bold = T) %>%
   scroll_box(height = "300px") %>%
@@ -164,7 +164,7 @@ ridge_ests |>
 
 The graph above depicts the estimated value of each coefficient for each lambda value tested. As the lambda penalty value increases, the coefficient estimates gradually diminish towards zero without being removed entirely.
 
-The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.0933 with an ROC-AUC value of 0.887.
+The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.0933 with an ROC-AUC value of 0.887, which is indicated on the graph below with a red circle.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
@@ -193,7 +193,7 @@ ridge_tune |>
   dplyr::select(lambda, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   ggplot() +
-  labs(title = "Ridge Regression: roc_auc vs lambda") +
+  labs(title = "Ridge Regression: ROC-AUC vs Lambda") +
   geom_line(aes(lambda, roc_auc)) + 
   geom_point(aes(lambda, roc_auc)) +
   geom_point(aes(ridge_best$lambda, ridge_best$mean), color = "red", shape = 1, size = 4) +
@@ -231,7 +231,7 @@ p_values_df <- data.frame(
 
 # display p-values
 p_values_df %>%
-  kbl(digits = 3) %>%
+  kbl(caption = "Ridge Regression Coefficients and P-values", digits = 3) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
   row_spec(0, bold = T) %>%
   scroll_box(height = "300px") %>%
@@ -269,7 +269,7 @@ lasso_ests |>
 
 In the graph above, we can see the coefficient estimates diminish towards zero as lambda increases. The reduction in coefficient estimates is notably steeper for lasso than with ridge regression. Unlike ridge regression, lasso performs feature selection by driving some coefficients to equal zero, thus eliminating them from the model. 
 
-The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.01 with an ROC-AUC value of 0.879.
+The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.01 with an ROC-AUC value of 0.879, which is indicated on the graph below with a red circle.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
@@ -333,7 +333,7 @@ p_values_df <- data.frame(
 
 # display p-values
 p_values_df %>%
-  kbl(digits = 3) %>%
+  kbl(caption = "Lasso Coefficients and P-values", digits = 3) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
   row_spec(0, bold = T) %>%
   scroll_box(height = "300px") %>%
