@@ -164,7 +164,7 @@ ridge_ests |>
 
 The graph above depicts the estimated value of each coefficient for each lambda value tested. As the lambda penalty value increases, the coefficient estimates gradually diminish towards zero without being removed entirely.
 
-The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best lambda to be *INSERT LAMBDA* 
+The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.0933 with an ROC-AUC value of 0.887.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
@@ -269,7 +269,7 @@ lasso_ests |>
 
 In the graph above, we can see the coefficient estimates diminish towards zero as lambda increases. The reduction in coefficient estimates is notably steeper for lasso than with ridge regression. Unlike ridge regression, lasso performs feature selection by driving some coefficients to equal zero, thus eliminating them from the model. 
 
-The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best lambda to be *INSERT LAMBDA*
+The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.01 with an ROC-AUC value of 0.879.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
