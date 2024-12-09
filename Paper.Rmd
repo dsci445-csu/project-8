@@ -33,12 +33,11 @@ data, researchers can uncover patterns that contribute to better understanding t
 failure.
 
 The main motivation for our group to study this dataset is to dive a little bit deeper into which factors 
-affectheart failure. Knowing that heart failure is a leading cause of death around the world, finding 
+affect heart failure. Knowing that heart failure is a leading cause of death around the world, finding 
 meaningful patterns can inform public health strategies, such as targeted lifestyle modifications or health 
-carecampaigns. The main objective is to transform this raw data into meaningful conclusions on heart disease. 
+care campaigns. The main objective is to transform this raw data into meaningful conclusions on heart disease. 
 
-
-# Variables
+## Variables
 
 In our project, we aimed to develop a predictive model to determine the likelihood of death resulting from
 heart failure using clinical patient data. The binary response variable, “DEATH_EVENT,” indicates whether
@@ -54,21 +53,16 @@ unit of blood, important for clotting. Serum creatinine measures creatinine leve
 assess kidney function, with high levels indicating possible kidney issues. Serum sodium tests the 
 concentration of sodium in the blood, vital for nerve and muscle function and fluid balance.
 
-## Exploratory Analysis 
-Before applying machine learning models, we began by performing an exploratory analysis of the data. This included assessing the linearity and normality of the predictors, identifying any outliers, and exploring potential correlations among the variables. We visualized distributions using
-histograms and box plots to understand the spread of each feature, and scatter plots to check the relationships between the predictor variables and the target variable (mortality). This helped us determine whether the data required transformations before applying machine learning techniques.
+# Methodology
 
-Before applying machine learning models, we began by performing an exploratory analysis of the data. This 
-included assessing the linearity and normality of the predictors, identifying any outliers, and exploring 
-potential correlations among the variables. We visualized distributions using histograms and box plots to 
-understand the spread of each feature, and scatter plots to check the relationships between the predictor 
-variables and the target variable (mortality). This helped us determine whether the data required 
-transformations before applying machine learning techniques.
+## Exploratory Analysis 
+
+Before applying machine learning models, we began by performing an exploratory analysis of the data. This included assessing the linearity and normality of the predictors, identifying any outliers, and exploring potential correlations among the variables. We visualized distributions using histograms and box plots to understand the spread of each feature, and scatter plots to check the relationships between the predictor variables and the target variable (mortality). This helped us determine whether the data required transformations before applying machine learning techniques.
 
 ## Linearity and Normality 
 
 In this analysis, we begin by testing the normality of several continuous variables in the dataset, including 
-age, creatinine phosphokinase, ejection fraction, platelets, serum creatinine, and serum sodium. First, we 
+age, creatinine phosphokinase, ejection fraction, platelets, serum creatine, and serum sodium. First, we 
 used histograms and Q-Q plots to visually inspect the distribution of these variables. The histograms for most
 variables indicated skewness, either to the right or left, suggesting that these variables do not follow a 
 normal distribution. Platelets and serum sodium appeared to be the most normally distributed, but even they 
@@ -79,7 +73,7 @@ exhibited greater deviations.
 To check the normality of the continuous variables, we performed the Shapiro-Wilk test, and all p-values were 
 below 0.05, indicating that none of the variables followed a normal distribution.
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 continuous_vars <- c("age", "creatinine_phosphokinase", "ejection_fraction","platelets", "serum_creatinine", "serum_sodium")
 par(mfrow = c(2, 2)) # Set up a grid for multiple plots
@@ -89,9 +83,10 @@ qqnorm(data[[var]], main = paste("Q-Q Plot of", var))
 qqline(data[[var]], col = "red")
 }
 ```
+
 Logistic regression analysis showed that predictor variables, such as age and serum creatinine, were significantly associated with the likelihood of a DEATH_EVENT. Residual diagnostics confirmed a good model fit, with minimal issues in linearity or outliers. Testing quadratic terms for the predictors showed no substantial improvement, indicating that the relationships between the variables and DEATH_EVENT were primarily linear.
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 model <- lm(time ~ age, data = data)
 fitted_values <- fitted(model)
@@ -108,7 +103,7 @@ grid()
 
 ## Polynomial Model
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 poly_model <- glm(DEATH_EVENT ~ poly(age, 2) + poly(serum_creatinine, 2) +
                   poly(ejection_fraction, 2) + poly(creatinine_phosphokinase, 2) +
                   poly(platelets, 2) + poly(serum_sodium, 2) + poly(time, 2) +
@@ -151,7 +146,7 @@ linear trends
 
 ## Logistic Regression
 
-Logistic regression is a go-to method for binary classification, and we explored three versions to analyze 
+Logistic regression is a go-to method for binary classification. Because it assumes linearity but not normality, logistic regression seems appropriate as our data is somewhat linear but not normally distributed. We explored three logistic regression models to analyze 
 predictive performance. First, we fit a basic logistic regression model without regularization as a baseline. 
 While simple, it doesn't handle collinearity or irrelevant predictors. Next, we applied ridge regression regularization, 
 which penalizes large coefficients to stabilize the model, though it doesn't eliminate predictors, making it 
@@ -184,6 +179,7 @@ test_data <- testing(data_split)
 
 prep_data <- recipe(DEATH_EVENT ~ ., data = train_data)
 ```
+
 
 Because the predictor variables are of varying ranges and units, we began by scaling all continuous features to prevent our regularization techniques from over-penalizing variables with larger ranges. Next, we split our data into a training set (containing 80% of the data) and a test set (containing 20%) so that we could assess the performance of our logistic regression models using 10-fold cross validation.
 
@@ -221,9 +217,11 @@ p_values_df %>%
   kable_styling(latex_options = "hold_position")
 ```
 
+
 The logistic regression model found that four predictors displayed significance: age, ejection fraction, serum creatine, and time.
 
 Next, we created a logistic regression model with ridge regression regularization. We determined the optimal lambda penalty value using 10-fold cross validation.
+
 
 ```{r,echo=FALSE, warning=FALSE, message=FALSE}
 # create vector of 100 lambda values from 0.01 to 10^10
@@ -257,9 +255,11 @@ ridge_ests |>
   coord_trans(x = "log10")
 ```
 
+
 The graph above depicts the estimated value of each coefficient for each lambda value tested. As the lambda penalty value increases, the coefficient estimates gradually diminish towards zero without being removed entirely.
 
 The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.0933 with an ROC-AUC value of 0.887, which is indicated on the graph below with a red circle.
+
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
@@ -521,15 +521,14 @@ lasso_metrics <- roc_auc(lasso_predictions, truth = DEATH_EVENT, .pred_1) %>%
 print(lasso_metrics)
 ```
 
-
 The 3 logistic models all had very similar performance metrics. This further indicates that regularization was not necessary for this data set. All 3 models had decently high accuracy values (0.83, 0.80, 0.82), but very poor ROC-AUC values (0.145, 0.144, 0.133). Such low ROC-AUC values indicate poor discrimination ability. Because accuracy scores are high and ROC-AUC values are so low, it is likely that accuracy is being erroneously driven up by predictions being assigned to the majority class. The majority class in our data set is DEATH_EVENT = 0, indicating a patient had not deceased during the follow-up period.
 
 Next we will explore alternative modeling methods that might address the limitations and performance issues of our logistic regression models.
 
 ## Support Vector Machine
 
-
-Support Vector Machines (SVMs) are binary classifiers. SVMs can handle multi-class classification including our response variable which is just two classes. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handels linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships. We decided to use SVM as our data was only somewhat linear. Earlier we established age, ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables had deviations. We also found that all p-values were below 0.05, indicating that none of the variables followed a normal distribution. Using this information we were able to confirm age and serum creatinine were associated with the likelihood of death. Because of this I decided to use age and serum creatinine as our main points of analysis.
+Support Vector Machines (SVMs) are binary classifiers. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handles linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships. We decided to use SVM as our data was only somewhat linear. 
+Earlier we established age, ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables had deviations. We also found that all p-values were below 0.05, indicating that none of the variables followed a normal distribution. Using this information we were able to confirm age and serum creatinine were associated with the likelihood of death. Because of this I decided to use age and serum creatinine as our main points of analysis.
 
 
 We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. We started by splitting the data into training set, with 80% of the data, and test set, with 20% of our data. We also tuned the SVM model with `C = 0.5` and `sigma = 0.0562`, in order to produce our best results. 
@@ -586,13 +585,10 @@ print(paste("Accuracy: ", round(accuracy, 3)))
 
 ```
 
-
-From this code we conclude that there are only 13 predictive variables we should consider. 
-
-We also looked into the accuracy of the SVM model this allows us to understand its predictive capabilities. We conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions. This code also created a confusion matrix, from this we can see the predicted and actual values using the Random Forest model. 
+We also looked into the accuracy of the SVM model this allows us to understand its predictive capabilities. We conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions. 
+This code also created a confusion matrix, from this we can see the predicted and actual values using the Random Forest model. 
 
 Using this information we decided to look into a SVM Descision Boundry. 
-
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 svm_data <- scaled_data[, c("age", "serum_creatinine", "DEATH_EVENT")]
@@ -709,7 +705,10 @@ cat("Accuracy: ", round(accuracy, 3))
 ```
 
 
-Using the information above we found the dimensions of both the training data and testing data. We also broke down the rf_model accuracy of each variable for the model. We analyzed each Mtry and what the OOB error of each would be. Finally we found the confusion matrix and the accuracy of the overall model. The confusion matrix quantifies the model's predictions using this we saw the majority of true labels correctly matched with the predicted labels, indicating high accuracy.  We also found an accuracy score 0.9 from our random forest model. This indicates that our model should offer 90% true positive predictions. Inorder to confirm these results we performed a ROC curve.
+Using the information above we found the dimensions of both the training data and testing data. We also broke down the rf_model accuracy of each variable for the model. 
+We analyzed each Mtry and what the OOB error of each would be. Finally we found the confusion matrix and the accuracy of the overall model.
+The confusion matrix quantifies the model's predictions using this we saw the majority of true labels correctly matched with the predicted labels, indicating high accuracy.
+We also found an accuracy score 0.9 from our random forest model. This indicates that our model should offer 90% true positive predictions. Inorder to confirm these results we performed a ROC curve.
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -731,25 +730,26 @@ Overall, the Random Forest model performed better, especially in terms of overal
 
 None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data. ROC-AUC values of 0.10 - 0.13 indicate that the model is performing worse than chance (0.5). A low ROC-AUC value indicates poor discrimination ability. Having a high accuracy value with a low ROC-AUC value might suggest that accuracy is being misleadingly driven up by the model assigning predictions to the majority class (in our case, death event = 0). 
 
-Performing both SVM and Random Forest we were able to conclude our best model was Random Forest. Our SVM held a high accuracy rating and a high ROC-AUC value indicating it would be a good prediction model for our data. However, once we tested the accuracy and ROC-AUC of Random Forest we can see this highly outranks any other options. This model performs the best overall with the predictions to the majority class death event = 0. 
+Performing both SVM and Random Forest we were able to conclude our best model was Random Forest. Our SVM held a high accuracy rating and a high ROC-AUC value indicating it would be a good prediction model for our data. 
+
+However, once we tested the accuracy and ROC-AUC of Random Forest we can see this highly outranks any other options. This model performs the best overall with the predictions to the majority class death event = 0. 
+
 
 Using random forest on this Data set can allow us to make correct predictions regarding the importance of each variable on the death outcome of patients. Researchers can uncover patterns within the data that reduce the rate of death toward individuals with heart failure.
 
 
 # References
 
-Davide Chicco, Giuseppe Jurman: Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. BMC Medical Informatics and Decision Making 20, 16 (2020). https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5 
-
-Mount Sinai. "Creatine Phosphokinase Test." Mount Sinai Health Library, https://www.mountsinai.org/health-library/tests/creatine-phosphokinase-test.
+Chicco, Davide, and Giuseppe Jurman. "Machine Learning Can Predict Survival of Patients with Heart Failure from Serum Creatinine and Ejection Fraction Alone." BMC Medical Informatics and Decision Making, vol. 20, no. 16, 2020, https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5.
 
 Cleveland Clinic. "Ejection Fraction." Cleveland Clinic, https://my.clevelandclinic.org/health/articles/16950-ejection-fraction.
 
-RegenLab. "Platelet Concentration: Concentration Factor." RegenLab, 7 Apr. 2022, https://www.regenlab.com/2022/04/07/platelet-concentration-concentration-factor/#:~:text=Platelet%20concentration%20is%20the%20number,expressed%20in%20millions%20per%20ml.
-
-Kidney Fund. "Serum Creatinine Test." American Kidney Fund, https://www.kidneyfund.org/all-about-kidneys/tests/serum-creatinine-test.
+Davide Chicco, Giuseppe Jurman: Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. BMC Medical Informatics and Decision Making 20, 16 (2020). https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5 
 
 Healthline. "Sodium Blood Test." Healthline, 16 Nov. 2023, https://www.healthline.com/health/sodium-blood#:~:text=A%20sodium%20blood%20test%20is,for%20nerve%20and%20muscle%20function.
 
- Chicco, Davide, and Giuseppe Jurman. "Machine Learning Can Predict Survival of Patients with Heart Failure from Serum Creatinine and Ejection Fraction Alone." BMC Medical Informatics and Decision Making, vol. 20, no. 16, 2020, https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5.
+Kidney Fund. "Serum Creatinine Test." American Kidney Fund, https://www.kidneyfund.org/all-about-kidneys/tests/serum-creatinine-test.
 
+Mount Sinai. "Creatine Phosphokinase Test." Mount Sinai Health Library, https://www.mountsinai.org/health-library/tests/creatine-phosphokinase-test.
 
+RegenLab. "Platelet Concentration: Concentration Factor." RegenLab, 7 Apr. 2022, https://www.regenlab.com/2022/04/07/platelet-concentration-concentration-factor/#:~:text=Platelet%20concentration%20is%20the%20number,expressed%20in%20millions%20per%20ml.
