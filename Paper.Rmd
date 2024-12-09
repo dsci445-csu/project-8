@@ -335,6 +335,7 @@ lasso_ests |>
   coord_trans(x = "log10")
 ```
 
+
 Here we can see the coefficient estimates reduce towards zero as lambda increases. The reduction in coefficient estimates is notably steeper for lasso than with ridge regression. Unlike ridge regression, lasso performs feature selection by driving some coefficients to equal zero, thus eliminating them. 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
