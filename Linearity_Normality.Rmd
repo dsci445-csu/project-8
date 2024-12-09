@@ -4,8 +4,60 @@ output: pdf_document
 date: "2024-11-20"
 ---
 
-```{r}
 
+```{r}
+ggplot(data, aes(x = age)) +
+  geom_histogram(binwidth = 5, fill = "skyblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Age Distribution", x = "Age", y = "Frequency")
+
+```
+
+```{r}
+ggplot(data, aes(x = creatinine_phosphokinase)) +
+  geom_histogram(binwidth = 100, fill = "coral", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of CPK Levels", x = "CPK Level", y = "Frequency")
+
+```
+```{r}
+numeric_data <- data %>% select_if(is.numeric)
+cor_matrix <- cor(numeric_data)
+
+library(corrplot)
+corrplot(cor_matrix, method = "circle", type = "upper", tl.col = "black", tl.cex = 0.8)
+
+```
+```{r}
+log_model <- glm(DEATH_EVENT ~ age + ejection_fraction + serum_creatinine + serum_sodium, 
+                 data = data, family = "binomial")
+
+summary(log_model)
+
+exp(cbind(OR = coef(log_model), confint(log_model)))
+
+```
+
+
+```{r}
+library(GGally)
+
+ggpairs(data, aes(color = as.factor(DEATH_EVENT), alpha = 0.7),
+        columns = c("age", "ejection_fraction", "serum_creatinine", "serum_sodium"))
+
+```
+
+```{r}
+library(rpart)
+library(rpart.plot)
+
+tree_model <- rpart(DEATH_EVENT ~ ., data = data, method = "class")
+
+rpart.plot(tree_model, type = 4, extra = 104, cex = 0.8, main = "Decision Tree")
+
+```
+
+```{r}
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 
 continuous_vars <- c("age", "creatinine_phosphokinase", "ejection_fraction", 
@@ -25,7 +77,21 @@ for (var in continuous_vars) {
   cat("Shapiro-Wilk test for", var, ":\n")
   print(test)
 }
+```
 
+
+
+```{r}
+model <- glm(DEATH_EVENT ~ age + serum_creatinine + ejection_fraction, data=data, family=binomial)
+
+fitted_values <- fitted(model)
+residuals <- residuals(model, type="pearson")
+plot(fitted_values, residuals, main="Residuals vs Fitted Values", xlab="Fitted Values", ylab="Residuals")
+abline(h=0, col="red")
+
+```
+
+```{r}
 par(mfrow = c(2, 2)) 
 for (var in continuous_vars) {
   plot(data[[var]], data$DEATH_EVENT, 
@@ -44,18 +110,7 @@ for (var in continuous_vars) {
 model_quad <- glm(DEATH_EVENT ~ data[[var]] + I(data[[var]]^2), family = binomial, data = data)
 summary(model_quad)
 
-
 ```
-```{r}
-model <- glm(DEATH_EVENT ~ age + serum_creatinine + ejection_fraction, data=data, family=binomial)
-
-fitted_values <- fitted(model)
-residuals <- residuals(model, type="pearson")
-plot(fitted_values, residuals, main="Residuals vs Fitted Values", xlab="Fitted Values", ylab="Residuals")
-abline(h=0, col="red")
-
-```
-
 
 
 ```{r}
