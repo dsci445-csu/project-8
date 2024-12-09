@@ -529,7 +529,8 @@ Next we will explore alternative modeling methods that might address the limitat
 ## Support Vector Machine
 
 
-Support Vector Machines (SVMs) are binary classifiers. SVMs can handle multi-class classification including our response variable which is just two classes. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handels linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships. We decided to use SVM as our data was only somewhat linear. Earlier we established age, ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables had deviations. We also found that all p-values were below 0.05, indicating that none of the variables followed a normal distribution. Using this information we were able to confirm age and serum creatinine were associated with the likelihood of death. Because of this I decided to use age and serum creatinine as our main points of analysis.
+Support Vector Machines (SVMs) are binary classifiers. SVMs can handle multi-class classification including our response variable which is just two classes. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handels linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships. We decided to use SVM as our data was only somewhat linear. 
+Earlier we established age, ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables had deviations. We also found that all p-values were below 0.05, indicating that none of the variables followed a normal distribution. Using this information we were able to confirm age and serum creatinine were associated with the likelihood of death. Because of this I decided to use age and serum creatinine as our main points of analysis.
 
 
 We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. We started by splitting the data into training set, with 80% of the data, and test set, with 20% of our data. We also tuned the SVM model with `C = 0.5` and `sigma = 0.0562`, in order to produce our best results. 
@@ -589,7 +590,8 @@ print(paste("Accuracy: ", round(accuracy, 3)))
 
 From this code we conclude that there are only 13 predictive variables we should consider. 
 
-We also looked into the accuracy of the SVM model this allows us to understand its predictive capabilities. We conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions. This code also created a confusion matrix, from this we can see the predicted and actual values using the Random Forest model. 
+We also looked into the accuracy of the SVM model this allows us to understand its predictive capabilities. We conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions. 
+This code also created a confusion matrix, from this we can see the predicted and actual values using the Random Forest model. 
 
 Using this information we decided to look into a SVM Descision Boundry. 
 
