@@ -73,7 +73,7 @@ exhibited greater deviations.
 To check the normality of the continuous variables, we performed the Shapiro-Wilk test, and all p-values were 
 below 0.05, indicating that none of the variables followed a normal distribution.
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 continuous_vars <- c("age", "creatinine_phosphokinase", "ejection_fraction","platelets", "serum_creatinine", "serum_sodium")
 par(mfrow = c(2, 2)) # Set up a grid for multiple plots
@@ -86,7 +86,7 @@ qqline(data[[var]], col = "red")
 
 Logistic regression analysis showed that predictor variables, such as age and serum creatinine, were significantly associated with the likelihood of a DEATH_EVENT. Residual diagnostics confirmed a good model fit, with minimal issues in linearity or outliers. Testing quadratic terms for the predictors showed no substantial improvement, indicating that the relationships between the variables and DEATH_EVENT were primarily linear.
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 model <- lm(time ~ age, data = data)
 fitted_values <- fitted(model)
@@ -103,7 +103,7 @@ grid()
 
 ## Polynomial Model
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 poly_model <- glm(DEATH_EVENT ~ poly(age, 2) + poly(serum_creatinine, 2) +
                   poly(ejection_fraction, 2) + poly(creatinine_phosphokinase, 2) +
                   poly(platelets, 2) + poly(serum_sodium, 2) + poly(time, 2) +
