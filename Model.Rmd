@@ -116,6 +116,7 @@ ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
 
 ```
 
+
 ## Confusion Matrix
 
 ```{r}
