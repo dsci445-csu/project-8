@@ -43,6 +43,7 @@ campaigns. The main objective is to transform this raw data into meaningful conc
 
 # Methodology
 
+<<<<<<< HEAD
 In our project, we aimed to develop a predictive model to determine the likelihood of death resulting from 
 heart failure using clinical patient data. The binary response variable, "DEATH_EVENT," indicates whether a 
 patient has died (value of 1) or survived (value of 0). The dataset includes 12 risk factor variables, 
@@ -52,6 +53,9 @@ concentration, serum creatinine level, serum sodium level, and the length of the
 
 
 #### Exploratory Analysis 
+=======
+## Exploratory Analysis 
+>>>>>>> 7232aa9ad243f74ff206002f41bf7bb9407901ac
 
 Before applying machine learning models, we began by performing an exploratory analysis of the data. This 
 included assessing the linearity and normality of the predictors, identifying any outliers, and exploring 
@@ -60,8 +64,18 @@ understand the spread of each feature, and scatter plots to check the relationsh
 variables and the target variable (mortality). This helped us determine whether the data required 
 transformations before applying machine learning techniques.
 
+## Linearity and Normality 
 
+In this analysis, we begin by testing the normality of several continuous variables in the dataset, including 
+age, creatinine phosphokinase, ejection fraction, platelets, serum creatinine, and serum sodium. First, we 
+used histograms and Q-Q plots to visually inspect the distribution of these variables. The histograms for most
+variables indicated skewness, either to the right or left, suggesting that these variables do not follow a 
+normal distribution. Platelets and serum sodium appeared to be the most normally distributed, but even they 
+showed some deviation from normality. The Q-Q plots confirmed these observations, showing that age, 
+ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables 
+exhibited greater deviations.
 
+<<<<<<< HEAD
 #### Linearity and Normality
 
 The analysis aimed to examine the linearity and normality of continuous variables and their relationships with the binary response variable, "DEATH_EVENT." Shapiro-Wilk tests indicated that none of the continuous 
@@ -117,14 +131,24 @@ grid()
 
 
 #### Logistic Regression with Regularization
+=======
+To check the normality of the continuous variables, we performed the Shapiro-Wilk test, and all p-values were 
+below 0.05, indicating that none of the variables followed a normal distribution.
 
+We then examined the relationship between these variables and the binary outcome, DEATH_EVENT, using scatter 
+plots with linear regression lines. These plots showed that variables like age and serum creatinine were 
+somewhat associated with the likelihood of death, showing linear trends in most cases. Logistic regression 
+models confirmed that many of the variables, such as age and serum creatinine, were significantly related to 
+the risk of death.
+>>>>>>> 7232aa9ad243f74ff206002f41bf7bb9407901ac
+
+## Logistic Regression
 
 Logistic regression is a go-to method for binary classification, and we explored three versions to analyze 
 predictive performance. First, we fit a basic logistic regression model without regularization as a baseline. 
-While simple, it doesn't handle collinearity or irrelevant predictors. Next, we applied Ridge regression regularization, 
+While simple, it doesn't handle collinearity or irrelevant predictors. Next, we applied ridge regression regularization, 
 which penalizes large coefficients to stabilize the model, though it doesn't eliminate predictors, making it 
-less interpretable than Lasso. Finally, we used Lasso regularization, which not only penalizes coefficients, but also performs feature selection by shrinking some to zero, improving interpretability. Comparing their 
-predictive power helps determine which approach balances accuracy and simplicity best.
+less interpretable than Lasso. Finally, we used Lasso regularization, which not only penalizes coefficients, but also performs feature selection by shrinking some to zero, improving interpretability. Comparing their predictive power helps determine which approach balances accuracy and simplicity best.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 set.seed(445)
@@ -132,6 +156,8 @@ set.seed(445)
 library(tidymodels)
 library(tidyverse)
 library(ggplot2)
+library(dplyr)
+library(kableExtra)
 
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 
@@ -146,11 +172,7 @@ data[need_scale] <- scale(data[need_scale])
 # convert DEATH_EVENT to a factor 
 data <- data %>%
   mutate(DEATH_EVENT = factor(DEATH_EVENT, levels = c("0", "1")))
-```
 
-Because the predictor variables are of varying ranges and units, we began by scaling all continuous features to prevent our regularization techniques from over-penalizing variables with larger ranges. Next, we split our data into a training set (containing 80% of the data) and a test set (containing 20%) so that we could assess the performance of our logistic regression models using cross validation.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # split data into training set (80%) and test set (20%)
 data_split <- initial_split(data, prop = 0.8)
 train_data <- training(data_split)
@@ -159,36 +181,45 @@ test_data <- testing(data_split)
 prep_data <- recipe(DEATH_EVENT ~ ., data = train_data)
 ```
 
-Once this setup was complete, we created our first logistic regression model with no regularization. The metrics we used to assess the performance of these models are roc_auc, which is the area under the receiver-operating characteristic (ROC) curve that represents the probability that the model will correctly rank a randomly selected positive example higher than a negative one, as well as accuracy, which is the proportion of correct predictions out of all total predictions. Below are the roc_auc and accuracy values of the first logistic regression model with no regularization:
+Because the predictor variables are of varying ranges and units, we began by scaling all continuous features to prevent our regularization techniques from over-penalizing variables with larger ranges. Next, we split our data into a training set (containing 80% of the data) and a test set (containing 20%) so that we could assess the performance of our logistic regression models using 10-fold cross validation.
 
-```{r,echo=FALSE, warning=FALSE}
-# fit logistic regression model
-logistic_spec <- logistic_reg(penalty = 0) %>%
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# fit logistic regression model 
+logistic_spec_glm <- logistic_reg(penalty = NULL) %>%
   set_mode("classification") %>%
-  set_engine("glmnet")
+  set_engine("glm")
 
-final_logistic_workflow <- workflow() %>%
-  add_model(logistic_spec) %>%
+final_logistic_workflow_glm <- workflow() %>%
+  add_model(logistic_spec_glm) %>%
   add_recipe(prep_data)
 
-final_logistic_model <- fit(final_logistic_workflow, data = train_data)
+final_logistic_model_glm <- fit(final_logistic_workflow_glm, data = train_data)
 
-# evaluate logistic model on test set
-logistic_predictions <- predict(final_logistic_model, test_data, type = "prob") %>%
-  bind_cols(test_data) %>%
-  # creating pred_class column by converting probabilities into class predictions
-  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+# extract p-values from model
+logistic_glm_fit <- final_logistic_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
 
-logistic_metrics <- roc_auc(logistic_predictions, truth = DEATH_EVENT, .pred_1) %>%
-  bind_rows(accuracy(logistic_predictions, truth = DEATH_EVENT, .pred_class))
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = logistic_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = logistic_glm_fit$coefficients[, "Std. Error"],
+  `p value` = logistic_glm_fit$coefficients[, "Pr(>|z|)"]
+)
 
-# print logistic model metrics
-print(logistic_metrics)
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px") %>%
+  kable_styling(latex_options = "hold_position")
 ```
 
-The logistic regression model with no regularization gave an roc_auc value of 0.1325 and an accuracy value of 0.8333. This accuracy value is fairly high, but the roc_auc value is very low, which indicates poor performance.
+The logistic regression model found that four predictors displayed significance: age, ejection fraction, serum creatine, and time.
 
-Next, we created a logistic regression model including ridge regression regularization. We determined the optimal lambda penalty value using cross validation.
+Next, we created a logistic regression model with ridge regression regularization. We determined the optimal lambda penalty value using 10-fold cross validation.
 
 ```{r,echo=FALSE, warning=FALSE, message=FALSE}
 # create vector of 100 lambda values from 0.01 to 10^10
@@ -222,7 +253,9 @@ ridge_ests |>
   coord_trans(x = "log10")
 ```
 
-This graph depicts the estimated value of each coefficient corresponding to each feature for each lambda value tested. As the penalty lambda value increases, the coefficient estimates diminish towards zero without being removed entirely.
+The graph above depicts the estimated value of each coefficient for each lambda value tested. As the lambda penalty value increases, the coefficient estimates gradually diminish towards zero without being removed entirely.
+
+The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.0933 with an ROC-AUC value of 0.887.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
 library(rsample)
@@ -244,21 +277,11 @@ workflow() |>
   add_recipe(prep_data) |>
   tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> ridge_tune
 
-ridge_tune |>
-  collect_metrics() |>
-  dplyr::select(lambda, .metric, mean) |>
-  pivot_wider(names_from = .metric, values_from = mean) |>
-  ggplot() +
-  labs(title = "Ridge Regression: roc_auc vs lambda") +
-  geom_line(aes(lambda, roc_auc)) + 
-  geom_point(aes(lambda, roc_auc)) +
-  coord_trans(x = "log10")
-```
-
-This graph depicts the roc_auc value for each lambda tested. A higher roc_auc value indicates better performance, and we can see there is a significant and sudden drop in roc_auc value after approximately the first third of lambda values. After completing cross validation, we can see which lambda value demonstrates the best performance: 
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # determine best lambda
+<<<<<<< HEAD
+=======
+
+>>>>>>> 7232aa9ad243f74ff206002f41bf7bb9407901ac
 ridge_metrics <- ridge_tune |>
   collect_metrics() |>
   filter(.metric == "roc_auc") |>
@@ -274,11 +297,163 @@ ridge_tune |>
   labs(title = "Ridge Regression: roc_auc vs lambda") +
   geom_line(aes(lambda, roc_auc)) + 
   geom_point(aes(lambda, roc_auc)) +
-  geom_point(aes(ridge_best$lambda, ridge_best$mean), color = "red") +
+  geom_point(aes(ridge_best$lambda, ridge_best$mean), color = "red", shape = 1, size = 4) +
   coord_trans(x = "log10")
 ```
 
-Once we have chosen the optimal penalty, we can fit the ridge regression model with this lambda value and assess its performance with roc_auc and accuracy metrics:
+Once we have chosen the optimal penalty, we can fit the ridge regression model with this lambda value and view its estimates.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+best_ridge_lambda <- show_best(ridge_tune, metric = "roc_auc", n = 1)$lambda
+
+# fit ridge regression model 
+ridge_spec_glm <- logistic_reg(penalty = best_ridge_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_ridge_workflow_glm <- workflow() %>%
+  add_model(ridge_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_ridge_model_glm <- fit(final_ridge_workflow_glm, data = train_data)
+
+# extract p-values from model
+ridge_glm_fit <- final_ridge_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = ridge_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = ridge_glm_fit$coefficients[, "Std. Error"],
+  `p value` = ridge_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px") %>%
+  kable_styling(latex_options = "hold_position")
+```
+
+The ridge regression model found the same four predictor variables significant as the logistic regression model without regularization: age, ejection fraction, serum creatine, and time. The coefficient estimates and p-values are overall very similar to those of the first logistic regression model. 
+
+For our final logistic regression model, we will implement lasso, once again using 10-fold cross validation to determine the optimal lambda penalty value. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# fit lasso model for each lambda
+lasso_ests <- data.frame()
+for(lam in lambda) {
+  lasso_spec <- logistic_reg(mixture = 1, penalty = lam) |>
+    set_mode("classification") |>
+    set_engine("glmnet")
+  
+    workflow() |>
+    add_model(lasso_spec) |>
+    add_recipe(prep_data) |>
+    fit(data) |>
+    tidy() |>
+    bind_rows(lasso_ests) -> lasso_ests
+}
+
+# visualize estimated coefficients for each lambda
+lasso_ests |>
+  filter(term != "(Intercept)") |>
+  ggplot() +
+  labs(title = "Lasso Method: Coefficient Estimates vs Penalty") +
+  geom_line(aes(penalty, estimate, group = term, colour = term)) +
+  coord_trans(x = "log10")
+```
+
+In the graph above, we can see the coefficient estimates diminish towards zero as lambda increases. The reduction in coefficient estimates is notably steeper for lasso than with ridge regression. Unlike ridge regression, lasso performs feature selection by driving some coefficients to equal zero, thus eliminating them from the model. 
+
+The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.01 with an ROC-AUC value of 0.879.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# perform 10-fold cross validation, estimate roc_auc for each lambda
+lasso_spec <- logistic_reg(mixture = 1, penalty = tune("lambda")) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+
+workflow() |>
+  add_model(lasso_spec) |>
+  add_recipe(prep_data) |>
+  tune_grid(resamples = data_10foldcv, grid = tune_df, metrics = metric_set(roc_auc, accuracy)) -> lasso_tune
+
+lasso_metrics <- lasso_tune |>
+  collect_metrics() |>
+  filter(.metric == "roc_auc") |>
+  mutate(method = "Lasso")
+
+lasso_best <- show_best(lasso_tune, metric = "roc_auc", n = 1)
+
+# show best lambda with lasso
+lasso_tune |>
+  collect_metrics() |>
+  dplyr::select(lambda, .metric, mean) |>
+  pivot_wider(names_from = .metric, values_from = mean) |>
+  ggplot() +
+  geom_line(aes(lambda, roc_auc)) +
+  labs(title = "Lasso Method: ROC-AUC vs Lambda") +
+  geom_point(aes(lambda, roc_auc)) +
+  geom_point(aes(lasso_best$lambda, lasso_best$mean), color = "red", shape = 1, size = 4) +
+  coord_trans(x = "log10")
+```
+
+Now with our chosen penalty, we can fit the lasso model with this lambda value and view its estimates.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+best_lasso_lambda <- show_best(lasso_tune, metric = "roc_auc", n = 1)$lambda
+
+# fit lasso model 
+lasso_spec_glm <- logistic_reg(penalty = best_lasso_lambda, mixture = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+final_lasso_workflow_glm <- workflow() %>%
+  add_model(lasso_spec_glm) %>%
+  add_recipe(prep_data)
+
+final_lasso_model_glm <- fit(final_lasso_workflow_glm, data = train_data)
+
+# extract p-values from model
+lasso_glm_fit <- final_lasso_model_glm %>% 
+  extract_fit_engine() %>% 
+  summary()
+
+# create a dataframe of coefficients and p-values
+p_values_df <- data.frame(
+  Estimate = lasso_glm_fit$coefficients[, "Estimate"],
+  `Std. Error` = lasso_glm_fit$coefficients[, "Std. Error"],
+  `p value` = lasso_glm_fit$coefficients[, "Pr(>|z|)"]
+)
+
+# display p-values
+p_values_df %>%
+  kbl(digits = 3) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, bold = T) %>%
+  scroll_box(height = "300px") %>%
+  kable_styling(latex_options = "hold_position")
+```
+
+The lasso model again found the same four predictor variables significant as both the logistic regression and ridge regression models: age, ejection fraction, serum creatine, and time. The coefficient estimates and p-values are again very similar to those of the logistic regression and ridge regression models.
+
+Because the ridge regression model and the lasso model resulted in estimates very similar to those of the logistic model without regularization, this indicates that regularization was likely unnecessary for our data set. 
+
+Now we will investigate the predictive performance of our three logistic regression models. The metrics we used to assess the performance of these models are ROC-AUC---the area under the receiver-operating characteristic (ROC) curve that represents the probability that the model will correctly rank a randomly selected positive example higher than a negative one---as well as accuracy, which is the proportion of correct predictions out of all total predictions.
+
+*REFORMAT OUTPUTS BELOW*
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# print logistic model metrics
+#print(logistic_metrics)
+```
+
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # finalize ridge with best lambda
@@ -306,6 +481,7 @@ ridge_metrics <- roc_auc(ridge_predictions, truth = DEATH_EVENT, .pred_1) %>%
 print(ridge_metrics)
 ```
 
+<<<<<<< HEAD
 The logistic regression model with ridge regression regularization gave an roc_auc value of 0.1374 and an accuracy value of 0.8333. These values are nearly identical to those of the logistic model with no regularization.
 
 For our final logistic regression model, we will implement lasso, once again using cross validation to determine the optimal lambda penalty value.
@@ -389,6 +565,8 @@ lasso_tune |>
 
 Again, once we have chosen the optimal penalty, we can fit the lasso model with this lambda value and assess its performance with roc_auc and accuracy metrics:
 
+=======
+>>>>>>> 7232aa9ad243f74ff206002f41bf7bb9407901ac
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # finalize lasso with best lambda
 best_lasso_lambda <- show_best(lasso_tune, metric = "roc_auc", n = 1)$lambda
@@ -415,42 +593,53 @@ lasso_metrics <- roc_auc(lasso_predictions, truth = DEATH_EVENT, .pred_1) %>%
 print(lasso_metrics)
 ```
 
-The logistic regression model with ridge regression regularization gave an roc_auc value of 0.1027 and an accuracy value of 0.850. These values are again nearly identical to those of the logistic model with no regularization and the logisitic model with ridge regression. The lasso model provided the highest accuracy of the three models, but also an even lower roc_auc value. 
+
+*DISCUSS RESULTS*
 
 
-
-## Linearity and Normality 
-
-In this analysis, we begin by testing the normality of several continuous variables in the dataset, including 
-age, creatinine phosphokinase, ejection fraction, platelets, serum creatinine, and serum sodium. First, we 
-used histograms and Q-Q plots to visually inspect the distribution of these variables. The histograms for most
-variables indicated skewness, either to the right or left, suggesting that these variables do not follow a 
-normal distribution. Platelets and serum sodium appeared to be the most normally distributed, but even they 
-showed some deviation from normality. The Q-Q plots confirmed these observations, showing that age, 
-ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables 
-exhibited greater deviations.
-
-To check the normality of the continuous variables, we performed the Shapiro-Wilk test, and all p-values were 
-below 0.05, indicating that none of the variables followed a normal distribution.
-
-We then examined the relationship between these variables and the binary outcome, DEATH_EVENT, using scatter 
-plots with linear regression lines. These plots showed that variables like age and serum creatinine were 
-somewhat associated with the likelihood of death, showing linear trends in most cases. Logistic regression 
-models confirmed that many of the variables, such as age and serum creatinine, were significantly related to 
-the risk of death.
+## Support Vector Machine
 
 
-
-#### Support Vector Machine
-
-
-Support Vector Machines (SVMs) are primarily binary classifiers. When dealing with more than two classes, SVMs can handle multi-class classification by applying techniques like "one-vs-one" or "one-vs-all," where multiple binary classifications are combined. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handels linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships, which our data is. It does not assume any specific distribution of predictors since none of our predictors are normal.
+Support Vector Machines (SVMs) are binary classifiers. SVMs can handle multi-class classification including our response variable which is just two classes. One of the key advantages of SVMs is their ability to perform non-linear classification, which increases their flexibility and allows them to handle complex decision boundaries. This handels linear and non-linear decision boundaries. Using a linear kernel is good for approximately linear relationships. We decided to use SVM as our data was only somewhat linear. Earlier we established age, ejection fraction, serum sodium, and platelets were closer to a normal distribution, while other variables had deviations. We also found that all p-values were below 0.05, indicating that none of the variables followed a normal distribution. Using this information we were able to confirm age and serum creatinine were associated with the likelihood of death. Because of this I decided to use age and serum creatinine as our main points of analysis.
 
 
-We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. They demonstrate the most ambiguous points of data. 
+We began with our SVM model looking to the Support Vectors and the parameters of interest. The support vector are important to understanding the model's decisions. They are the informative points and make it the most critical for classification. We started by splitting the data into training set, with 80% of the data, and test set, with 20% of our data. We also tuned the SVM model with `C = 0.5` and `sigma = 0.0562`, in order to produce our best results. 
+
 
 
 ```{r, echo=FALSE, include=FALSE}
+<<<<<<< HEAD
+=======
+
+library(caTools) 
+library(randomForest) 
+library(e1071) 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(MASS)
+library(GGally)
+library(tidymodels)
+library(ISLR)
+library(class)
+library(reshape2)
+library(pROC)
+
+
+set.seed(445)
+
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+data <- na.omit(data)
+
+data$DEATH_EVENT <- as.factor(data$DEATH_EVENT)
+
+scaled_data <- data
+scaled_data[, -which(names(data) == "DEATH_EVENT")] <- scale(data[, -which(names(data) == "DEATH_EVENT")])
+
+
+>>>>>>> 7232aa9ad243f74ff206002f41bf7bb9407901ac
 set.seed(42)
 scaled_data <- data
 library(e1071)             
@@ -467,12 +656,15 @@ print(conf_matrix)
 
 accuracy <- sum(predictions == test_data$DEATH_EVENT) / length(predictions)
 print(paste("Accuracy: ", round(accuracy, 3)))
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 7232aa9ad243f74ff206002f41bf7bb9407901ac
 ```
 
-From this code we conclude that there are only 13 predictive variables we should consider. We also considered the accuracy of how the SVM model this allows us to understand its predictive capabilities.  We also conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions.  
 
-
-
+From this code we conclude that there are only 13 predictive variables we should consider. We also looked into the accuracy of the SVM model this allows us to understand its predictive capabilities. We conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions. Using this information we decided to look into a SVM Descision Boundry. 
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -488,8 +680,14 @@ predictions_grid <- predict(svm_model_2d, grid)
 
 ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
   geom_point(alpha = 0.7, size = 3) +
+<<<<<<< HEAD
   geom_tile(data = grid, 
             aes(x = age, y = serum_creatinine, fill = as.factor(predictions_grid)), 
+=======
+  geom_tile(data = grid,
+            aes(x = age, y = serum_creatinine,
+                fill = predictions_grid),
+>>>>>>> 7232aa9ad243f74ff206002f41bf7bb9407901ac
             alpha = 0.3) +
   scale_fill_manual(values = c("0" = "red", "1" = "blue")) +
   scale_color_manual(values = c("red", "blue")) +
@@ -500,7 +698,11 @@ ggplot(svm_data, aes(x = age, y = serum_creatinine)) +
 
 ```
 
-- The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. We can see that overall serium creatinine has little effect on the death effect especially in males. Meanwhile age and serum creatinine has a large response on females.
+
+The SVM Boundry analyzes the age vs serum creatinine using the death effect for males vs females. The Red of the grpah represents the Male populations, meanwhile Blue represents the Female population. Overall, serium creatinine and age has little effect on the death in males. Meanwhile age and serum creatinine has a large response on females. 
+
+
+Finally, to confirm and quantity these results we performed a Receiver Operator Characteristic, a ROC curve is a plot used to show the diagnostic ability of binary classifiers. A ROC curve plots the true positive rate (TPR) against the false positive rate (FPR). In the graph below we analyize the Death Effect and the overall true positive rate of this model.
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -511,16 +713,76 @@ plot(roc_curve, col = "blue", main = "ROC Curve for SVM Model")
 
 ```
 
-- The SVM model, tuned with `C = 0.5` and `sigma = 0.0562`, had an ROC of 0.86, a sensitivity of 86%, and a specificity of 66%.
+Using this we can see a ROC Curve of 0.86. This graph demonstrated the Death effect from the SVM Model had a sensitivity of 86%, and a specificity of 66%. Indicating a True Positive rate of 86 and a False Positive Rate of 66.
 
 
-#### Random Forest
+Using all of the information concluded from this model we can see that it overall performed better than any of the logistic regression approaches. However, I wanted to try one more approach so I began Random Forest. 
 
-Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also robust to overfitting, particularly compared to individual decision trees, and provides a built-in estimate of model performance through out-of-bag error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
+
+## Random Forest
+
+Random Forest is a powerful machine learning algorithm used for both classification and regression. It works by building multiple decision trees and aggregating their predictions to improve accuracy and reduce overfitting. Key advantages include its ability to handle complex, non-linear relationships, manage missing data, and automatically capture feature interactions. Random Forest is also good for overfitting, compared to individual decision trees, and provides a built-in estimate of model performance through error. Additionally, it offers valuable insights into feature importance, helping to identify which variables most influence the outcome. Overall, Random Forest is particularly effective for high-dimensional datasets, imbalanced classes, and when model interpretability is secondary to prediction accuracy.
+
+We decided to use this model as our data was not perfectly linear and had normality issues. We began by splitting the data into training set, with 80% of the data, and test set, with 20% of our data. We found that we should use an Mtry=6 to preform best. 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
+<<<<<<< HEAD
 rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 3, importance = TRUE)
 
+=======
+set.seed(445)
+
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+
+sum(is.na(data))
+
+data <- na.omit(data)
+
+data$DEATH_EVENT <- as.factor(data$DEATH_EVENT)
+
+split <- sample.split(data, SplitRatio = 0.7) 
+
+
+train <- subset(data, split == "TRUE") 
+test <- subset(data, split == "FALSE") 
+
+scaled_data <- data
+scaled_data[, -which(names(data) == "DEATH_EVENT")] <- scale(data[, -which(names(data) == "DEATH_EVENT")])
+
+
+set.seed(120)  
+classifier_RF = randomForest(x = train[-5], 
+                             y = train$age, 
+                             ntree = 500)
+y_pred = predict(classifier_RF, newdata = test[-5])
+confusion_mtx = table(test[, 5], y_pred) 
+
+set.seed(42)
+
+split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
+train_data <- subset(scaled_data, split == TRUE)
+test_data <- subset(scaled_data, split == FALSE)
+
+dim(train_data)
+dim(test_data)
+
+rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 3, importance = TRUE)
+
+importance(rf_model)
+
+tuned_rf <- tuneRF(train_data[, -which(names(train_data) == "DEATH_EVENT")], train_data$DEATH_EVENT, stepFactor = 1.5, improve = 0.01, trace = TRUE)
+tuned_rf
+
+set.seed(42)
+
+split <- sample.split(scaled_data$DEATH_EVENT, SplitRatio = 0.8)
+train_data <- subset(scaled_data, split == TRUE)
+test_data <- subset(scaled_data, split == FALSE)
+
+
+rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 6, importance = TRUE)
+
+>>>>>>> 7232aa9ad243f74ff206002f41bf7bb9407901ac
 rf_predictions <- predict(rf_model, test_data)
 
 conf_matrix <- table(Predicted = rf_predictions, Actual = test_data$DEATH_EVENT)
@@ -531,30 +793,36 @@ cat("Accuracy: ", round(accuracy, 3))
 ```
 
 
+Using the information above we found the dimensions of both the training data and testing data. We also broke down the rf_model accuracy of each variable for the model. We analyzed each Mtry and what the OOB error of each would be. Finally we found the confusion matrix and the accuracy of the overall model. The confusion matrix quantifies the model's predictions using this we saw the majority of true labels correctly matched with the predicted labels, indicating high accuracy.  We also found an accuracy score 0.9 from our random forest model. This indicates that our model should offer 90% true positive predictions. Inorder to confirm these results we performed a ROC curve.
+
+
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 rf_model <- randomForest(DEATH_EVENT ~ ., data = train_data, ntree = 500, mtry = 3, importance = TRUE)
 
+<<<<<<< HEAD
  rf_probs <- predict(rf_model, test_data, type = "prob")[, 2] 
  roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
+=======
+rf_probs <- predict(rf_model, test_data, type = "prob")[, 2]
+roc_curve <- roc(test_data$DEATH_EVENT, rf_probs)
+>>>>>>> 7232aa9ad243f74ff206002f41bf7bb9407901ac
 
  plot(roc_curve, col = "blue", main = "ROC Curve for Random Forest Model")
 
 ```
 
 
+With the ROC Curve graph above we found a 0.91 rate. It indicated a 91% sensitivity rate indicating 91% true positive rate. However, this model has a moderate specifity with a 69% rate. 
 
-- The Random Forest model performed best with `mtry = 2`, giving an ROC of 0.91. It was effective at identifying true positives (91% sensitivity) but had a moderate specificity of 69%.
-
-- Overall, the Random Forest model performed better, especially in terms of overall accuracy and detecting positive cases.
+Overall, the Random Forest model performed better, especially in terms of overall accuracy and detecting positive cases.
 
 
-<<<<<<< HEAD
-
-=======
 # Results
 
-None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data. Roc_auc values of 0.10 - 0.13 indicate that the model is performing worse than chance (0.5). A low roc_auc value indicates poor discrimination ability. Having a high accuracy value with a low roc_auc value might suggest that accuracy is being misleadingly driven up by the model assigning predictions to the majority class (in our case, death event = 0). 
->>>>>>> 06e66d4c39f850846dcef0b1529f6760960600e5
+None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data. ROC-AUC values of 0.10 - 0.13 indicate that the model is performing worse than chance (0.5). A low ROC-AUC value indicates poor discrimination ability. Having a high accuracy value with a low ROC-AUC value might suggest that accuracy is being misleadingly driven up by the model assigning predictions to the majority class (in our case, death event = 0). 
+
+Performing both SVM and Random Forest we were able to conclude our best model was Random Forest. Our SVM held a high accuracy rating and a high ROC-AUC value indicating it would be a good prediction model for our data. However, once we tested the accuracy and ROC-AUC of Random Forest we can see this highly outranks any other options. This model performs the best overall with the predictions to the majority class death event = 0. 
+
 
 # References
 
