@@ -185,6 +185,7 @@ test_data <- testing(data_split)
 prep_data <- recipe(DEATH_EVENT ~ ., data = train_data)
 ```
 
+
 Because the predictor variables are of varying ranges and units, we began by scaling all continuous features to prevent our regularization techniques from over-penalizing variables with larger ranges. Next, we split our data into a training set (containing 80% of the data) and a test set (containing 20%) so that we could assess the performance of our logistic regression models using 10-fold cross validation.
 
 
@@ -221,9 +222,11 @@ p_values_df %>%
   kable_styling(latex_options = "hold_position")
 ```
 
+
 The logistic regression model found that four predictors displayed significance: age, ejection fraction, serum creatine, and time.
 
 Next, we created a logistic regression model with ridge regression regularization. We determined the optimal lambda penalty value using 10-fold cross validation.
+
 
 ```{r,echo=FALSE, warning=FALSE, message=FALSE}
 # create vector of 100 lambda values from 0.01 to 10^10
@@ -257,9 +260,11 @@ ridge_ests |>
   coord_trans(x = "log10")
 ```
 
+
 The graph above depicts the estimated value of each coefficient for each lambda value tested. As the lambda penalty value increases, the coefficient estimates gradually diminish towards zero without being removed entirely.
 
 The graph below depicts the ROC-AUC value for each lambda tested. 10-fold cross validation determined the best penalty to be lambda = 0.0933 with an ROC-AUC value of 0.887, which is indicated on the graph below with a red circle.
+
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # perform 10-fold cross validation, estimate roc_auc for each lambda
@@ -733,7 +738,9 @@ Overall, the Random Forest model performed better, especially in terms of overal
 
 None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data. ROC-AUC values of 0.10 - 0.13 indicate that the model is performing worse than chance (0.5). A low ROC-AUC value indicates poor discrimination ability. Having a high accuracy value with a low ROC-AUC value might suggest that accuracy is being misleadingly driven up by the model assigning predictions to the majority class (in our case, death event = 0). 
 
-Performing both SVM and Random Forest we were able to conclude our best model was Random Forest. Our SVM held a high accuracy rating and a high ROC-AUC value indicating it would be a good prediction model for our data. However, once we tested the accuracy and ROC-AUC of Random Forest we can see this highly outranks any other options. This model performs the best overall with the predictions to the majority class death event = 0. 
+Performing both SVM and Random Forest we were able to conclude our best model was Random Forest. Our SVM held a high accuracy rating and a high ROC-AUC value indicating it would be a good prediction model for our data. 
+
+However, once we tested the accuracy and ROC-AUC of Random Forest we can see this highly outranks any other options. This model performs the best overall with the predictions to the majority class death event = 0. 
 
 Using random forest on this Data set can allow us to make correct predictions regarding the importance of each variable on the death outcome of patients. Researchers can uncover patterns within the data that reduce the rate of death toward individuals with heart failure.
 
