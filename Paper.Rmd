@@ -531,7 +531,7 @@ We began with our SVM model looking to the Support Vectors and the parameters of
 
 
 
-```{r, echo=FALSE, include=FALSE}
+```{r, echo=FALSE}
 
 library(caTools) 
 library(randomForest) 
@@ -582,7 +582,11 @@ print(paste("Accuracy: ", round(accuracy, 3)))
 ```
 
 
-From this code we conclude that there are only 13 predictive variables we should consider. We also looked into the accuracy of the SVM model this allows us to understand its predictive capabilities. We conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions. Using this information we decided to look into a SVM Descision Boundry. 
+From this code we conclude that there are only 13 predictive variables we should consider. 
+
+We also looked into the accuracy of the SVM model this allows us to understand its predictive capabilities. We conclude that this model will have an accuracy of 0.817 this indicates the model has a 81.7% of making correct predictions. This code also created a confusion matrix, from this we can see the predicted and actual values using the Random Forest model. 
+
+Using this information we decided to look into a SVM Descision Boundry. 
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -723,6 +727,8 @@ Overall, the Random Forest model performed better, especially in terms of overal
 None of the three logistic regression models performed well. The model without regularization performed very similarly to those which implemented ridge regression and lasso, indicating that regularization is unnecessary for this data. ROC-AUC values of 0.10 - 0.13 indicate that the model is performing worse than chance (0.5). A low ROC-AUC value indicates poor discrimination ability. Having a high accuracy value with a low ROC-AUC value might suggest that accuracy is being misleadingly driven up by the model assigning predictions to the majority class (in our case, death event = 0). 
 
 Performing both SVM and Random Forest we were able to conclude our best model was Random Forest. Our SVM held a high accuracy rating and a high ROC-AUC value indicating it would be a good prediction model for our data. However, once we tested the accuracy and ROC-AUC of Random Forest we can see this highly outranks any other options. This model performs the best overall with the predictions to the majority class death event = 0. 
+
+Using random forest on this Data set can allow us to make correct predictions regarding the importance of each variable on the death outcome of patients. Researchers can uncover patterns within the data that reduce the rate of death toward individuals with heart failure.
 
 
 # References
