@@ -4,6 +4,23 @@ author: "Paige Galvan, Neha Deshpande, & Witlie Leslie"
 date: "2024-11-25"
 output: pdf_document
 ---
+```{r, include = FALSE}
+library(caTools) 
+library(randomForest) 
+library(e1071) 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(MASS)
+library(GGally)
+library(tidymodels)
+library(ISLR)
+library(class)
+library(reshape2)
+library(pROC)
+```
+
 
 # Motivation
 
@@ -22,7 +39,14 @@ campaigns. The main objective is to transform this raw data into meaningful conc
 
 # Methodology
 
+In our project, we aimed to develop a predictive model to determine the likelihood of death resulting from
+heart failure using clinical patient data. The binary response variable, “DEATH_EVENT,” indicates whether
+a patient has died (value of 1) or survived (value of 0). The dataset includes 12 risk factor variables, 
+comprising of 5 binary variables—anemia status, diabetes status, high blood pressure status, sex, and smoking status—and 7 numerical variables, including age, creatine phosphokinase level, ejection fraction, platelet concentration, serum creatinine level, serum sodium level, and the length of the follow-up period.
+
 ## Exploratory Analysis 
+Before applying machine learning models, we began by performing an exploratory analysis of the data. This included assessing the linearity and normality of the predictors, identifying any outliers, and exploring potential correlations among the variables. We visualized distributions using
+histograms and box plots to understand the spread of each feature, and scatter plots to check the relationships between the predictor variables and the target variable (mortality). This helped us determine whether the data required transformations before applying machine learning techniques.
 
 Before applying machine learning models, we began by performing an exploratory analysis of the data. This 
 included assessing the linearity and normality of the predictors, identifying any outliers, and exploring 
@@ -45,11 +69,31 @@ exhibited greater deviations.
 To check the normality of the continuous variables, we performed the Shapiro-Wilk test, and all p-values were 
 below 0.05, indicating that none of the variables followed a normal distribution.
 
-We then examined the relationship between these variables and the binary outcome, DEATH_EVENT, using scatter 
-plots with linear regression lines. These plots showed that variables like age and serum creatinine were 
-somewhat associated with the likelihood of death, showing linear trends in most cases. Logistic regression 
-models confirmed that many of the variables, such as age and serum creatinine, were significantly related to 
-the risk of death.
+```{r}
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+continuous_vars <- c("age", "creatinine_phosphokinase", "ejection_fraction","platelets", "serum_creatinine", "serum_sodium")
+par(mfrow = c(2, 2)) # Set up a grid for multiple plots
+for (var in continuous_vars) {
+hist(data[[var]], main = paste("Histogram of", var), xlab = var, col = "skyblue", border = "white")
+qqnorm(data[[var]], main = paste("Q-Q Plot of", var))
+qqline(data[[var]], col = "red")
+}
+```
+Logistic regression analysis showed that predictor variables, such as age and serum creatinine, were significantly associated with the likelihood of a DEATH_EVENT. Residual diagnostics confirmed a good model fit, with minimal issues in linearity or outliers. Testing quadratic terms for the predictors showed no substantial improvement, indicating that the relationships between the variables and DEATH_EVENT were primarily linear.
+
+```{r}
+data <- read.csv("heart_failure_clinical_records_dataset.csv")
+model <- lm(time ~ age, data = data)
+fitted_values <- fitted(model)
+residuals <- resid(model)
+plot(fitted_values, residuals,
+main = "Residuals vs. Fitted Values",
+xlab = "Fitted Values",
+ylab = "Residuals",
+pch = 19, col = "blue")
+abline(h = 0, col = "red", lty = 2)
+grid()
+```
 
 ## Logistic Regression
 
@@ -70,7 +114,6 @@ library(kableExtra)
 
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
 
-# scale continuous variables
 numeric_vars <- sapply(data, is.numeric)
 boolean_vars <- sapply(data, function(x) all(x %in% c(0,1)))
 
@@ -78,11 +121,9 @@ need_scale <- numeric_vars & !boolean_vars
 
 data[need_scale] <- scale(data[need_scale])
 
-# convert DEATH_EVENT to a factor 
 data <- data %>%
   mutate(DEATH_EVENT = factor(DEATH_EVENT, levels = c("0", "1")))
 
-# split data into training set (80%) and test set (20%)
 data_split <- initial_split(data, prop = 0.8)
 train_data <- training(data_split)
 test_data <- testing(data_split)
@@ -617,3 +658,14 @@ Performing both SVM and Random Forest we were able to conclude our best model wa
 # References
 
 Davide Chicco, Giuseppe Jurman: Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. BMC Medical Informatics and Decision Making 20, 16 (2020). https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5 
+
+Creatine phosphokinase level: measurement of creatine phosphokinase in blood. CPK is an enzyme that indicates tissue stress at high levels https://www.mountsinai.org/health-library/tests/creatine-phosphokinase-test
+
+ejection fraction: how much oxygen-rich blood is pumped out to the body’s organs with each contraction https://my.clevelandclinic.org/health/articles/16950-ejection-fraction
+
+platelet concentration: the number of platelets in a unit of blood volume https://www.regenlab.com/2022/04/07/platelet-concentration-concentration-factor/#:~:text=Platelet%20concentration%20is%20the%20number,expressed%20in%20millions%20per%20ml.
+
+serum creatine: a measruemnt of the level of creatine in blood which is linked to kidney function https://www.kidneyfund.org/all-about-kidneys/tests/serum-creatinine-test
+
+serum sodium: a measurement of sodium levels in blood https://www.healthline.com/health/sodium-blood#:~:text=A%20sodium%20blood%20test%20is,for%20nerve%20and%20muscle%20function.
+
