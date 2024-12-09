@@ -4,6 +4,48 @@ output: pdf_document
 date: "2024-11-20"
 ---
 
+## exploratory analysis 
+```{r}
+summary(data[, c("age", "creatinine_phosphokinase", "ejection_fraction", 
+                 "platelets", "serum_creatinine", "serum_sodium", "time")])
+
+table(data$anaemia)
+table(data$diabetes)
+table(data$high_blood_pressure)
+table(data$sex)
+table(data$smoking)
+table(data$DEATH_EVENT)
+
+```
+
+
+```{r}
+library(corrplot)
+cor_matrix <- cor(data[, c("age", "creatinine_phosphokinase", "ejection_fraction", 
+                           "platelets", "serum_creatinine", "serum_sodium", "time")])
+corrplot(cor_matrix, method = "circle", type = "upper")
+
+```
+
+
+```{r}
+par(mfrow = c(2, 3))
+for (var in c("age", "creatinine_phosphokinase", "ejection_fraction", 
+              "platelets", "serum_creatinine", "serum_sodium", "time")) {
+  boxplot(data[[var]] ~ data$DEATH_EVENT, main = paste(var, "by DEATH_EVENT"), 
+          xlab = "DEATH_EVENT", ylab = var, col = c("lightblue", "pink"))
+}
+
+par(mfrow = c(2, 3))
+for (var in c("age", "creatinine_phosphokinase", "ejection_fraction", 
+              "platelets", "serum_creatinine", "serum_sodium", "time")) {
+  plot(data[[var]], data$DEATH_EVENT, main = paste(var, "vs DEATH_EVENT"), 
+       xlab = var, ylab = "DEATH_EVENT", col = "blue", pch = 19)
+  abline(lm(data$DEATH_EVENT ~ data[[var]]), col = "red")
+}
+```
+
+
 ```{r}
 
 data <- read.csv("heart_failure_clinical_records_dataset.csv")
@@ -47,13 +89,18 @@ summary(model_quad)
 
 ```
 ```{r}
-model <- glm(DEATH_EVENT ~ age + serum_creatinine + ejection_fraction, data=data, family=binomial)
+model <- lm(time ~ age, data = data)
 
 fitted_values <- fitted(model)
-residuals <- residuals(model, type="pearson")
-plot(fitted_values, residuals, main="Residuals vs Fitted Values", xlab="Fitted Values", ylab="Residuals")
-abline(h=0, col="red")
+residuals <- resid(model)
 
+plot(fitted_values, residuals, 
+     main = "Residuals vs. Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     pch = 19, col = "blue")
+abline(h = 0, col = "red", lty = 2) 
+grid()
 ```
 
 

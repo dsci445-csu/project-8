@@ -22,6 +22,14 @@ campaigns. The main objective is to transform this raw data into meaningful conc
 
 # Methodology
 
+In our project, we aimed to develop a predictive model to determine the likelihood of death resulting from 
+heart failure using clinical patient data. The binary response variable, "DEATH_EVENT," indicates whether a 
+patient has died (value of 1) or survived (value of 0). The dataset includes 12 risk factor variables, 
+comprising 5 binary variables—anemia status, diabetes status, high blood pressure status, sex, and smoking 
+status—and 7 numerical variables, including age, creatine phosphokinase level, ejection fraction, platelet 
+concentration, serum creatinine level, serum sodium level, and the length of the follow-up period.
+
+
 #### Exploratory Analysis 
 
 Before applying machine learning models, we began by performing an exploratory analysis of the data. This 
@@ -33,8 +41,39 @@ transformations before applying machine learning techniques.
 
 
 
-#### Logistic Regression with Regularization
+#### Linearity and Normality
 
+The analysis aimed to examine the linearity and normality of continuous variables and their relationships with the binary response variable, "DEATH_EVENT." Shapiro-Wilk tests indicated that none of the continuous 
+variables followed a normal distribution, as all p-values were below 0.05. Histograms revealed that most 
+variables were skewed, except for platelets and serum sodium, which appeared closer to normal. This was 
+further supported by Q-Q plots, where variables like age, ejection fraction, serum sodium, and platelets 
+exhibited patterns suggesting near-normality, while others deviated significantly
+
+
+Logistic regression analysis showed that predictor variables, such as age and serum creatinine, were 
+significantly associated with the likelihood of a DEATH_EVENT. Residual diagnostics confirmed a good model 
+fit, with minimal issues in linearity or outliers. Testing quadratic terms for the predictors showed no 
+substantial improvement, indicating that the relationships between the variables and DEATH_EVENT were 
+primarily linear.
+
+```{r}
+
+model <- lm(time ~ age, data = data)
+
+fitted_values <- fitted(model)
+residuals <- resid(model)
+
+plot(fitted_values, residuals, 
+     main = "Residuals vs. Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     pch = 19, col = "blue")
+abline(h = 0, col = "red", lty = 2) 
+grid()
+```
+
+
+#### Logistic Regression with Regularization
 
 
 Logistic regression is a go-to method for binary classification, and we explored three versions to analyze 
