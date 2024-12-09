@@ -391,7 +391,28 @@ Now we will investigate the predictive performance of our three logistic regress
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # print logistic model metrics
-#print(logistic_metrics)
+# fit logistic regression model
+logistic_spec <- logistic_reg(penalty = 0) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+final_logistic_workflow <- workflow() %>%
+  add_model(logistic_spec) %>%
+  add_recipe(prep_data)
+
+final_logistic_model <- fit(final_logistic_workflow, data = train_data)
+
+# evaluate logistic model on test set
+logistic_predictions <- predict(final_logistic_model, test_data, type = "prob") %>%
+  bind_cols(test_data) %>%
+  # creating pred_class column by converting probabilities into class predictions
+  mutate(.pred_class = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = levels(DEATH_EVENT)))
+
+logistic_metrics <- roc_auc(logistic_predictions, truth = DEATH_EVENT, .pred_1) %>%
+  bind_rows(accuracy(logistic_predictions, truth = DEATH_EVENT, .pred_class))
+
+# print logistic model metrics
+print(logistic_metrics)
 ```
 
 
