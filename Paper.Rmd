@@ -387,8 +387,7 @@ Because the ridge regression model and the lasso model resulted in estimates ver
 
 Now we will investigate the predictive performance of our three logistic regression models. The metrics we used to assess the performance of these models are ROC-AUC---the area under the receiver-operating characteristic (ROC) curve that represents the probability that the model will correctly rank a randomly selected positive example higher than a negative one---as well as accuracy, which is the proportion of correct predictions out of all total predictions.
 
-*REFORMAT OUTPUTS BELOW*
-
+Logistic Model Metrics:
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # print logistic model metrics
 # fit logistic regression model
@@ -415,7 +414,7 @@ logistic_metrics <- roc_auc(logistic_predictions, truth = DEATH_EVENT, .pred_1) 
 print(logistic_metrics)
 ```
 
-
+Ridge Model Metrics:
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # finalize ridge with best lambda
 best_ridge_lambda <- show_best(ridge_tune, metric = "roc_auc", n = 1)$lambda
@@ -441,7 +440,7 @@ ridge_metrics <- roc_auc(ridge_predictions, truth = DEATH_EVENT, .pred_1) %>%
 
 print(ridge_metrics)
 ```
-
+Lasso Model Metrics:
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # finalize lasso with best lambda
 best_lasso_lambda <- show_best(lasso_tune, metric = "roc_auc", n = 1)$lambda
@@ -469,8 +468,9 @@ print(lasso_metrics)
 ```
 
 
-*DISCUSS RESULTS*
+The 3 logistic models all had very similar performance metrics. This further indicates that regularization was not necessary for this data set. All 3 models had decently high accuracy values (0.83, 0.80, 0.82), but very poor ROC-AUC values (0.145, 0.144, 0.133). Such low ROC-AUC values indicate poor discrimination ability. Because accuracy scores are high and ROC-AUC values are so low, it is likely that accuracy is being erroneously driven up by predictions being assigned to the majority class. The majority class in our data set is DEATH_EVENT = 0, indicating a patient had not deceased during the follow-up period.
 
+Next we will explore alternative modeling methods that might address the limitations and performance issues of our logistic regression models.
 
 ## Support Vector Machine
 
