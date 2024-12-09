@@ -716,7 +716,10 @@ cat("Accuracy: ", round(accuracy, 3))
 ```
 
 
-Using the information above we found the dimensions of both the training data and testing data. We also broke down the rf_model accuracy of each variable for the model. We analyzed each Mtry and what the OOB error of each would be. Finally we found the confusion matrix and the accuracy of the overall model. The confusion matrix quantifies the model's predictions using this we saw the majority of true labels correctly matched with the predicted labels, indicating high accuracy.  We also found an accuracy score 0.9 from our random forest model. This indicates that our model should offer 90% true positive predictions. Inorder to confirm these results we performed a ROC curve.
+Using the information above we found the dimensions of both the training data and testing data. We also broke down the rf_model accuracy of each variable for the model. 
+We analyzed each Mtry and what the OOB error of each would be. Finally we found the confusion matrix and the accuracy of the overall model.
+The confusion matrix quantifies the model's predictions using this we saw the majority of true labels correctly matched with the predicted labels, indicating high accuracy.
+We also found an accuracy score 0.9 from our random forest model. This indicates that our model should offer 90% true positive predictions. Inorder to confirm these results we performed a ROC curve.
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -741,6 +744,7 @@ None of the three logistic regression models performed well. The model without r
 Performing both SVM and Random Forest we were able to conclude our best model was Random Forest. Our SVM held a high accuracy rating and a high ROC-AUC value indicating it would be a good prediction model for our data. 
 
 However, once we tested the accuracy and ROC-AUC of Random Forest we can see this highly outranks any other options. This model performs the best overall with the predictions to the majority class death event = 0. 
+
 
 Using random forest on this Data set can allow us to make correct predictions regarding the importance of each variable on the death outcome of patients. Researchers can uncover patterns within the data that reduce the rate of death toward individuals with heart failure.
 
