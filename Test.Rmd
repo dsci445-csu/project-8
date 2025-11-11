@@ -10,7 +10,7 @@ testing more
 
 Research Questions: 
 1.) Do the genres/rating have an effect on the profit?
-2.) hsjdhskjd
+2.) Can we predict ______?
 3.) 
 =======
 >>>>>>> c86389b95d5a04593ee68ef02fc29c070cdb6320
