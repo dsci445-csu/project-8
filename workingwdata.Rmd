@@ -1,0 +1,19 @@
+---
+title: "workingwdata"
+output: pdf
+---
+
+
+```{r libraries}
+library(dplyr)
+library(readr)
+library(tidyr)
+```
+
+
+```{r loadingin}
+
+the_data <- read.csv('Movie_Industry_1554_84.csv')
+
+the_data
+```
