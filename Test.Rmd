@@ -4,3 +4,10 @@ output: html_document
 ---
 
 test
+testing more
+
+
+Research Questions: 
+1.) Do the genres/rating have an effect on the profit?
+2.) 
+3.) 
