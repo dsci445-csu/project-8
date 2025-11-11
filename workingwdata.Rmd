@@ -17,3 +17,10 @@ the_data <- read.csv('Movie_Industry_1554_84.csv')
 
 the_data
 ```
+## Research Question:
+
+
+
+
+```{r }
+
