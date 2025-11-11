@@ -4,6 +4,7 @@ output: html_document
 ---
 
 test
+<<<<<<< HEAD
 testing more
 
 
@@ -11,3 +12,5 @@ Research Questions:
 1.) Do the genres/rating have an effect on the profit?
 2.) 
 3.) 
+=======
+>>>>>>> c86389b95d5a04593ee68ef02fc29c070cdb6320
