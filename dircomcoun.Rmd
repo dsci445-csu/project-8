@@ -1,0 +1,450 @@
+---
+title: "dircomcoun"
+author: "robin"
+output: pdf_document
+---
+
+```{r reproducibility}
+set.seed(445)
+```
+
+```{r libraries}
+library(broom)
+library(dplyr)
+library(readr)
+library(readxl)
+library(ggplot2)
+library(tidyr)
+library(tidyverse)
+library(glmnet)
+library(tree)
+library(randomForest)
+```
+
+```{r downloading data}
+reading_in <- read.csv('Movie_Industry_1554_84.csv', fileEncoding = "latin1")
+```
+
+
+```{r na vals}
+sum(is.na(reading_in))  ## Making sure there is no NA data
+```
+
+# #Data Cleaning Obstacles.
+### What we have observed:
+
+Budget Column has some values that are 0. We can assume that the information was
+not found or not provided.
+Genre Column has some genres that are labeled "unrated" or "unspecified". 
+Release Date Column has some with just month and yr, others have the day 
+included as well
+Columns that deal with characters have some that are unknown/showing as a black 
+diamond.
+Score Column isn't specific. What kind of score, what were the factors, etc. 
+Just that the score is IMDB user score.
+
+It was specified that there are 220 movies per year from 1986-2016 (30 yrs)
+- but there are more than (220*30) = 6600 rows. There are 6,820...
+
+
+The route I decided to take...
+
+```{r checkingbudget}
+
+## Here i think it would be useful to group by year, and see how many movies in 
+## each year have budget values of 0. If it's a somewhat even spread I could
+## just take them out ??? If not maybe just avg from that year and fill the 0's 
+## with the means of that budget of that yr instead...
+
+year_data <- reading_in |>
+             select(year, budget) |>
+             group_by(year) |>
+             summarise(count_budget_0 = sum(budget == 0), total_budgets = n(), 
+                       percent_missing = count_budget_0/total_budgets)
+
+  
+## The code above is being used to determine how to handle the budgets that 
+## are "0" 
+## The percentage of movies per year that have a 0 budget is a wide range. 
+## We have as little as about 17% and as much as about 60%. 
+
+
+## Imputing Median value for the zero budgets by year
+## mutate 1st line: replacing 0s with NA in budget col.
+## mutate 2nd line: new col. that indicates if the budget was missing. 1 
+## indicates a 0 budget and 0 if budget exists.
+## group_by: year (idea was to get median by year and not overall so we're at 
+## least accounting for inflation)
+## mutate 3rd line: if the budget has an NA value, replace with the median
+## ungroup(): to return dataframe to how it looked. 
+
+reading_in <- reading_in |>
+              mutate(budget = ifelse(budget == 0, NA, budget),
+                     budget_missing = ifelse(is.na(budget),1,0)) |>
+              group_by(year) |>
+              mutate(budget = ifelse(is.na(budget),
+                                     median(budget, na.rm = TRUE),
+                                     budget)) |>
+              ungroup()
+
+
+## Thinking abt. some issues with this is other factors that affect budget that 
+## aren't being considered. Such as the company producing the movie, the star 
+## actor, and the country it's being made in. I think trying to adjust budget 
+## for all these factors would be rough because of how much data we're working 
+## with. It feels relatively small easpecially since there are about 220 movies 
+## in each year from 1986-2016. If we started adjusting budget with all the 
+## different factors, there might be some very skewed numbers for the budget. 
+## Median > Mean bc there could some vastly large outliers that could distort a
+## budget.
+```
+
+
+```{r monthyear}
+## Here we're removing the day from the release date to make it easier to work 
+## with. The idea behind this is to make release date easier to work with and 
+## that release date is influential in a seasonal sense, so day is okay to drop.
+
+## mutate line: making a new column that is taking only the year and the month 
+## of the release date of each movie
+## select line: removing the release date.
+reading_in <- reading_in |>
+              mutate(release_YM = substr(released, 1,7))|>
+              select(-released)
+```
+
+
+```{r unrecognizable characters}
+## This was dealt with when loading in the dataset. Was achieved by defining the
+## encoding. There was "UTF-8" and "latin1". When UTF-8 was tried it brought the
+## dataset from 6,820 observations to 16. So "latin1" was used and seemed to fix
+## all the unrecognizable characters. 
+## Unrecognizable characters just seemed to mean characters that had accents. 
+```
+
+
+```{r rating mash}
+## Some of the movies were labeled "unspecified", some were labeled "unrated", 
+## and others "not rated". The reason to us is unknown, but the labels seem 
+## similar and mean the same thing to us. So to make it easier to work with when
+## we are considering rating in our predictive model it is clear. 
+
+## mutate line: classifies all the unspecified/unrated to being unknown
+reading_in <- reading_in |>
+              mutate(rating = ifelse(rating %in% c("UNRATED", "NOT RATED", 
+                                                   "Not specified"), 
+                                     "Unknown", rating))
+```
+
+## A:
+bc we're considering revenue/gross, the spread will be really wide, and bc of 
+this we might want to transform that data. log() or some other transform 
+technique. 
+Start with basic multiple linear regression and observe the model. 
+Splitting the data into training and testing data. 
+(this might be difficult with year)
+We can pick a year as a threshold and use all the data before that year as the 
+training data and the year after to be testing data. This can be done using 
+train <- reading_in|>filter(year <= 2010) or whatever
+
+fit a full lm model and then use LASSO and cross-validation to choose optimal 
+predictors. 
+
+ridge regression
+LASSO
+cross-validation
+
+## Focus on Company, Director, Country
+
+
+```{r individ look at variables}
+
+lm(gross ~ country, data = reading_in)
+
+lm(gross ~ company, data = reading_in)
+
+lm(gross ~ director, data = reading_in)
+
+## Obviously won't work because all the variables are characters.
+## I think country is limited enough I might be able to factor it.
+```
+
+
+```{r factor country}
+
+trial_data <- reading_in
+
+
+unique(trial_data$country)
+
+## Assigning regions to each country so factoring for regression would be easier.
+trial_data <- trial_data |>
+  mutate(region = case_when(
+    country %in% 
+      c("USA", "Canada", "Mexico", "Bahamas", "Aruba", "Panama") ~ 
+      "North America",
+    country %in% 
+      c("Argentina", "Brazil", "Peru", "Chile", "Colombia", "Cuba", "Jamaica") ~
+      "South America",
+    country %in% 
+      c("UK", "Ireland", "France", "Belgium", "Netherlands", "Switzerland", 
+        "Austria", "Germany", "West Germany", "Portugal", "Italy", "Spain", 
+        "Malta") ~ "Western Europe",
+    country %in% 
+      c("Sweden", "Denmark", "Norway", "Finland", "Iceland") ~ "Northern Europe",
+    country %in% 
+      c("Hungary", "Czech Republic", "Poland", "Romania", "Ukraine", "Greece", 
+        "Soviet Union", "Russia") ~ "Eastern Europe",
+    country %in% 
+      c("Republic of Maccedonia", "Federal Republic of Yugoslavia") ~ 
+      "Southeastern Europe",
+    country %in% 
+      c("Israel", "Iran", "Palestine", "Saudi Arabia") ~ "Middle East",
+    country %in% 
+      c("Japan", "China", "Hong Kong", "Taiwan", "South Korea") ~ "East Asia",
+    country %in% 
+      c("India") ~ "South Asia",
+    country %in% 
+      c("Thailand", "Indonesia") ~ "Southeast Asia",
+    country %in% 
+      c("Australia", "New Zealand") ~ "Oceania",
+    country %in% 
+      c("South Africa", "Kenya") ~ "Africa"))
+
+## The countries are now in their respective regions. More manageable and 
+## factorable.
+
+trial_data$region <- as.factor(trial_data$region)
+
+
+## Seeing how many unique values for directors and companies are present in the 
+## data. There are more than 1000 unique values. Meaning, factoring is wayy out 
+## of the question. Looking into frequency encoding and target encoding.
+## Used unique()
+#unique(trial_data$director)
+#unique(trial_data$company)
+
+## Decided on Frequency Encoding
+## Data frame for frequency of directors from the movie data
+direc_freq <- trial_data |>
+    count(director, name = "direc_freq")
+
+## Frequency of director added to the movie data for hopes to make frequency 
+## encoding work
+trial_data <- trial_data |>
+         left_join(direc_freq, by = "director")
+
+## Data frame for frequency of companies from the movie data
+comp_freq <- trial_data |>
+    count(company, name = "comp_freq")
+
+## Freq of companies added to the movie data for hopes to make frequency 
+## encoding work
+trial_data <- trial_data |>
+          left_join(comp_freq, by = "company")
+
+
+## In order to account for skew, log transformation to the frequency columns is 
+## a good idea.
+
+trial_data$direc_freq <- log1p(trial_data$direc_freq)
+trial_data$comp_freq <- log1p(trial_data$comp_freq)
+
+## All the necessary transformations made to get a lm model working.
+```
+## Group the Countries by Region:
+North America: 
+USA, Canada, Mexico, Bahamas, Aruba, Panama
+South America:
+Argentina, Brazil, Peru, Chile, Colombia, Cuba, Jamaica
+Western Europe:
+UK, Ireland, France, Belgium, Netherlands, Switzerland, Austria
+Germany, West Germany, Portugal, Italy, Spain, Malta
+Northern Europe:
+Sweden, Denmark, Norway, Finland, Iceland
+Eastern Europe:
+Hungary, Czech Republic, Poland, Romania, Ukraine, Greece, Soviet Union, Russia 
+Southeastern Europe:
+Republic of Macedonia, Federal Republic of Yugoslavia
+Middle East:
+Israel, Iran, Palestine, Saudi Arabia
+East Asia:
+Japan, China, Hong Kong, Taiwan, South Korea
+South Asia:
+India
+Southeast Asia:
+Thailand, Indonesia
+Oceania:
+Australia, New Zealand
+Africa:
+South Africa, Kenya
+
+
+```{r fitting models}
+## Applying a log transformation to the gross values to make the data on-par
+## with the direc/comp changes. 
+trial_data$gross <- log1p(trial_data$gross)
+
+## Singular regression models for to see individual results of each predictor 
+## and gross. 
+direc_model <- lm(gross ~ direc_freq, data = trial_data)
+
+comp_model <- lm(gross ~ comp_freq, data = trial_data)
+
+region_model <- lm(gross ~ region, data = trial_data)
+
+## Viewing results of the models
+summary(direc_model)
+
+summary(comp_model)
+
+summary(region_model)
+
+## Full model, with all predictors and viewing results. 
+all_model <- lm(gross ~ direc_freq + comp_freq + region, data = trial_data)
+summary(all_model)
+```
+
+
+```{r correlation check}
+## Testing collinearity of director frequency and company frequency
+cor(trial_data$direc_freq, trial_data$comp_freq)
+
+## The output was: 0.2852552 
+## It's pretty low which tells us we can treat the results from the models 
+## separate and not have to worry about the influence on each other. 
+```
+
+## Full Model Interpretation:
+
+Since the log transformations were applied to the gross, the director 
+frequencies, and the company frequencies we are looking at how the percent 
+change in one variable relates to the percent change in gross. From the full 
+model, a 1% increase in director frequency is associated with a 0.807% increase 
+in gross, all other things held constant. 
+A 1% increase in company frequency is associated with 0.503% increase in gross. 
+Factors are treated a bit different. The coefficients are differences in log 
+gross relative to the reference region. 
+Following the formula: e^(estimate coefficient)  - 1 = ###
+The number is a percentage and that tells us whether the movies from that region
+gross more or less than the baseline region.
+East Asia: -0.81 Movies from this region gross abt. 81% less than the baseline 
+region
+Eastern Europe: -0.858 Movies from this region gross abt. 86% less than the 
+baseline region
+Middle East: -0.885 Movies from this region gross abt. 88% less than the 
+baseline region
+North America: -0.395 Movies from this region gross abt. 40% less than the 
+baseline region.
+Northern Europe: -0.94 Movies from this region gross abt. 94% less than the 
+baseline region.
+Oceania: -0.755 Movies from this region gross abt. 76% less than the baseline 
+region.
+South America:-0.789 Movies from this region gross abt. 79% less than the 
+baseline region.
+South Asia: -0.621 Movies from this region gross about 62% less than the 
+baseline region.
+Southeast Asia: -0.234 Movies from this region gross about 23% less than the 
+baseline region. 
+Southeastern Europe: -0.96 Movies from this region gross abt. 96% less than the 
+baseline region.
+Western Europe: -0.78 Movies from this region gross abt. 78% less than the 
+baseline region. 
+
+```{r baseline region}
+## To see which region was used as the baseline
+## It was alphabetical, so Africa was the baseline region
+levels(trial_data$region)
+```
+
+So the baseline region is Africa and all the other region gross are some 
+percentage less than Africa which at face seems unusual. Maybe this means that 
+the movies included in the African region had some abnormally high gross values?
+To see if we can get a different interpretation we can re-run with a different 
+region as the baseline.
+
+```{r newbaseline}
+## To see how many movies were made in each region. 
+table(trial_data$region)
+
+## To change baseline region to North America
+## Africa had 10 movies, whereas NA has 5040
+trial_data$region <- relevel(trial_data$region, ref = "North America")
+```
+
+
+```{r AnotherFullModel}
+## Full model regression with NA as the baseline region
+full_model_NA <- lm(gross ~ direc_freq + comp_freq + region, data = trial_data)
+summary(full_model_NA)
+```
+
+
+## Second Full Model Interpretation w North America as baseline region:
+
+The interpretation for director and company frequency still stands, that with 1%
+increase in frequency that the gross will increase by 0.807% or 0.503% 
+respectively. Then changing the baseline region to North America we have new 
+calculations and interpretations:
+Africa: 0.654 Movies from this region gross abt. 65% more than North America. 
+East Asia: -0.678 Movies from this region gross abt. 68% less than North 
+America.
+Eastern Europe: -0.765 Movies from this region gross abt. 77% less than North 
+America.
+Middle East: -0.81 Movies from this region gross abt. 81% less than North 
+America. 
+Northern Europe: -0.904 Movies from this region gross abt. 90% less than North 
+America.
+Oceania: -0.594 Movies from this region gross abt. 59% less than North America
+South America: -0.65 Movies from this region gross abt. 65% less than North 
+America
+South Asia: -0.374 Movies from this region gross abt. 37% less than North 
+America
+Southeast Asia: 0.267 Movies from this region gross abt. 27% more than North 
+America.
+Southeastern Europe: -0.934 Movies from this region gross abt. 93% less than 
+North America.
+Western Europe: -0.639 Movies from this region gross abt. 64% less than North 
+America. 
+
+```{r looking at Africa and Southeast Asia}
+afr_val <- subset(trial_data, region == "Africa")[,
+                                                  c("name", "gross", 
+                                                    "director", "company")]
+
+southa_val <- subset(trial_data, region == "Southeast Asia")[, 
+                                                             c("name", "gross", 
+                                                               "director", 
+                                                               "company")]
+
+na_val <- subset(trial_data, region == "North America")[, 
+                                                        c("name", "gross", 
+                                                          "director", 
+                                                          "company")]
+
+min(afr_val$gross)
+max(afr_val$gross)
+min(southa_val$gross)
+max(southa_val$gross)
+min(na_val$gross)
+max(na_val$gross)
+```
+
+If we look at Africa and Southeast Asia, there are only 10 movies representing 
+Africa and 5 movies representing Southeast Asia. All of them have relatively 
+high gross values. So when they are compared to North America, where there are 
+5,040 movies and the gross has values that are significantly lower than the 
+gross values of the African and Southeastern Asian sets then the region gross of
+the African and Southeastern Asian are going to seem higher than North America. 
+That's why their coefficients are positive. 
+
+Final Remarks:
+Director frequency alone explains 12.4% variance and company frequency explains 
+24.7% variance. Company frequency seems to be a stronger predictor than director
+frequency. When fitting the full model, the director frequency becomes slightly 
+more impactful than the company frequency and the full model explains 33% of 
+variance.
+After adjusting for director and company frequency, North American films tend to
+produce more gross than other regions. 
+
+
