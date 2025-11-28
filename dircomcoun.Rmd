@@ -19,6 +19,8 @@ library(tidyverse)
 library(glmnet)
 library(tree)
 library(randomForest)
+library(caret)
+library(rsample)
 ```
 
 ```{r downloading data}
@@ -447,4 +449,39 @@ variance.
 After adjusting for director and company frequency, North American films tend to
 produce more gross than other regions. 
 
+
+```{r LASSO}
+splitting_data <- initial_split(trial_data, prop = 0.6)
+train_data <- training(splitting_data)
+test_data <- testing(splitting_data)
+
+x_train <- model.matrix(~ direc_freq + comp_freq + region, data = train_data)
+y_train <- train_data$gross
+
+
+x_test <- model.matrix(gross ~ direc_freq + comp_freq + region, 
+                       data = test_data)
+y_test <- test_data$gross
+
+cv_lasso <- cv.glmnet(x_train, y_train, alpha = 1)
+
+ideal_lam <- cv_lasso$lambda.min
+
+las_model <- glmnet(x_train, y_train, alpha = 1, lambda = ideal_lam)
+
+predictions_data <- predict(las_model, newx = x_test)
+
+rss <- sum((y_test - predictions_data)^2)
+tss <- sum((y_test - predictions_data)^2)
+
+r_sqr <- 1 - (rss/tss)
+r_sqr
+
+coef(las_mod)
+```
+
+
+Tried to build a LASSO model, the lengths of the matrix and the vector don't 
+align so it's not running. Unless someone knows how to fix it, I'll revisit this 
+laterrr. 
 
