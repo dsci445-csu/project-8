@@ -161,11 +161,14 @@ cross-validation
 
 ```{r individ look at variables}
 
-lm(gross ~ country, data = reading_in)
+## I did run the below code, but commented it out bc it was taking too much 
+## space
 
-lm(gross ~ company, data = reading_in)
+## lm(gross ~ country, data = reading_in)
 
-lm(gross ~ director, data = reading_in)
+## lm(gross ~ company, data = reading_in)
+
+## lm(gross ~ director, data = reading_in)
 
 ## Obviously won't work because all the variables are characters.
 ## I think country is limited enough I might be able to factor it.
@@ -484,4 +487,38 @@ coef(las_mod)
 Tried to build a LASSO model, the lengths of the matrix and the vector don't 
 align so it's not running. Unless someone knows how to fix it, I'll revisit this 
 laterrr. 
+
+Revisit Idea from lines 148 thru 150. Essentially for predictive model we can
+try to use the data from before 2010 to train the model and then use the data 
+after 2010 as the predictive data, see if it aligns.
+
+
+
+```{r retry LASSO}
+
+trial_data_b4 <- trial_data |>
+                   filter(year <= 2010)
+
+trial_data_b4
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
