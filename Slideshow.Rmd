@@ -1,0 +1,13 @@
+---
+title: "Slideshow"
+author: 
+date: 
+output: ioslides_presentation
+---
+
+# Intro 
+
+
+
+
+# Methods
