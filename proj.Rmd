@@ -1,0 +1,175 @@
+---
+title: "proj"
+author: "Group8"
+date: "2025-11-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(tidytext)
+library(textdata)
+```
+
+
+```{r load, message=FALSE}
+
+
+df <- read_csv("Movie_Industry_1554_84.csv")
+
+df <- df %>%
+  mutate(
+    gross = as.numeric(gross),
+    score = as.numeric(score),
+    votes = as.numeric(votes),
+    year  = as.numeric(year)
+  ) %>%
+  filter(!is.na(gross))
+head(df)
+```
+
+```{r month_clean}
+df$release_month <- NA_integer_
+
+for (i in seq_len(nrow(df))) {
+  date_value <- df$released[i]
+  
+  if (grepl("-", date_value)) {
+    df$release_month[i] <- as.integer(substr(date_value, 6, 7))
+  } 
+  else {
+    month_chr <- sub("/.*", "", date_value)
+    df$release_month[i] <- as.integer(month_chr)
+  }
+}
+```
+
+
+
+```{r season}
+
+df$season <- cut(
+  df$release_month,
+  breaks = c(0, 3, 6, 9, 12),
+  labels = c("Winter", "Spring", "Summer", "Fall")
+)
+head(df)
+```
+
+
+
+
+```{r title_sentiment}
+
+afinn <- get_sentiments("afinn")
+
+df$name <- iconv(df$name, from = "", to = "ASCII//TRANSLIT", sub = "")
+
+df_title <- df %>%
+  mutate(id = row_number())
+
+title_afinn <- df_title %>%
+  select(id, name) %>%
+  unnest_tokens(word, name) %>%
+  inner_join(afinn, by = "word") %>%
+  group_by(id) %>%
+  summarize(afinn_score = sum(value), .groups = "drop")
+
+df_title <- df_title %>%
+  left_join(title_afinn, by = "id") %>%
+  mutate(afinn_score = replace_na(afinn_score, 0))
+
+punct_intensity <- numeric(nrow(df_title))
+
+for (i in seq_len(nrow(df_title))) {
+  title_raw <- df_title$name[i]
+  if (is.na(title_raw)) {
+    punct_intensity[i] <- 0
+  } else {
+    exclaim_count  <- lengths(regmatches(title_raw, gregexpr("!",  title_raw)))
+    question_count <- lengths(regmatches(title_raw, gregexpr("\\?", title_raw)))
+    score_punct    <- 0.5 * exclaim_count - 0.5 * question_count
+    if (title_raw == toupper(title_raw)) score_punct <- score_punct + 1
+    punct_intensity[i] <- score_punct
+  }
+}
+
+df_title$sentiment_best <- df_title$afinn_score + punct_intensity
+
+df <- df_title
+head(df)
+```
+
+```{r models}
+# Sentiment vs gross
+model_sentiment <- lm(gross ~ sentiment_best, data = df)
+
+# Score and votes separately
+model_score     <- lm(gross ~ score, data = df)
+model_votes     <- lm(gross ~ votes, data = df)
+
+# Score and votes combined
+model_score_votes <- lm(gross ~ score + votes, data = df)
+
+# Year
+model_year      <- lm(gross ~ year, data = df)
+
+# Month (numeric)
+model_month     <- lm(gross ~ release_month, data = df)
+
+# Season (categorical)
+model_season    <- lm(gross ~ season, data = df)
+
+summary(model_sentiment)
+summary(model_score)
+summary(model_votes)
+summary(model_score_votes)
+summary(model_year)
+summary(model_month)
+summary(model_season)
+```
+
+
+```{r plots}
+
+ggplot(df, aes(x = sentiment_best)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Sentiment score", y = "Count",
+       title = "Distribution of Title Sentiment") +
+  theme_minimal()
+
+ggplot(df, aes(x = sentiment_best, y = gross)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Sentiment score", y = "Gross",
+       title = "Gross vs. Title Sentiment") +
+  theme_minimal()
+
+ggplot(df, aes(x = score, y = gross)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "IMDB score", y = "Gross",
+       title = "Gross vs. Score") +
+  theme_minimal()
+
+ggplot(df, aes(x = votes, y = gross)) +
+  geom_point(alpha = 0.4) +
+  scale_x_log10() +
+  labs(x = "Votes (log scale)", y = "Gross",
+       title = "Gross vs. Votes") +
+  theme_minimal()
+
+ggplot(df, aes(x = year, y = gross)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Year", y = "Gross",
+       title = "Gross vs. Year") +
+  theme_minimal()
+```
+
+
