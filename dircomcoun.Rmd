@@ -98,7 +98,7 @@ reading_in <- reading_in |>
 ## aren't being considered. Such as the company producing the movie, the star 
 ## actor, and the country it's being made in. I think trying to adjust budget 
 ## for all these factors would be rough because of how much data we're working 
-## with. It feels relatively small easpecially since there are about 220 movies 
+## with. It feels relatively small especially since there are about 220 movies 
 ## in each year from 1986-2016. If we started adjusting budget with all the 
 ## different factors, there might be some very skewed numbers for the budget. 
 ## Median > Mean bc there could some vastly large outliers that could distort a
