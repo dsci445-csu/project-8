@@ -21,7 +21,11 @@ library(tree)
 library(randomForest)
 library(caret)
 library(rsample)
+library(tidymodels)
+library(workflows)
+library(recipes)
 ```
+
 
 ```{r downloading data}
 reading_in <- read.csv('Movie_Industry_1554_84.csv', fileEncoding = "latin1")
@@ -503,14 +507,63 @@ trial_data_b4
 ```
 
 
+Lasso not useful with 3 predictors, would be better when we have all our variables together. 
+
+potential issues w freq. encoding. directors/companies w same frequency are treated identically. even if the movie gross associated w them are v different. 
 
 
 
+More interpretation
+
+```{r resid v fitted plot}
+
+plot(full_model_NA$fitted.values, full_model_NA$residuals,
+     xlab = "Fitted Vals",
+     ylab = "Residuals",
+     main = "Residuals vs Fitted")
+
+```
+
+Residual Variance is not constant across the range of fitted values. Model is more consistent in predicting the high-gross movies, than mid to low gross movies. 
 
 
+```{r qqplot}
+
+qqnorm(full_model_NA$residuals, main = "QQ Plot of Residuals")
+qqline(full_model_NA$residuals)
+```
+
+Mostly normal. Left tail is a little curvy, so some non-normality going on and skewness. We know that there were some seemingly extreme negative values in the res v fit plot. So coefficients of model should overall be reliable.  
 
 
+```{r knn using 5-fold}
 
+knn_recipe <- recipe(gross ~ region + direc_freq + comp_freq, data = trial_data) |>
+  step_unknown(region)|>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors()) |>
+  step_normalize(all_numeric_predictors())
+
+knn_spec <- nearest_neighbor(mode = "regression",
+                             neighbors = tune()) |>
+  set_engine("kknn")
+  
+knn_workflow <- workflow() |>
+  add_recipe(knn_recipe) |>
+  add_model(knn_spec)
+
+cv_5 <- vfold_cv(data = trial_data, v = 5)
+k_grid <- tibble(neighbors = seq(3,21, by = 2))
+
+knn_results_5 <- tune_grid(knn_workflow,
+                           resamples = cv_5,
+                           grid = k_grid,
+                           metrics = metric_set(rmse, rsq))
+
+knn_results_5 |>
+  collect_metrics()
+
+```
 
 
 
