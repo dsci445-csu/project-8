@@ -4,7 +4,6 @@ author: "all"
 output: pdf_document
 ---
 
-
 ```{r seed}
 set.seed(445)
 ```
@@ -33,23 +32,83 @@ movie_data <-  read.csv('Movie_Industry_1554_84.csv', fileEncoding = "latin1")
 ```
 
 
+```{r budget filling median}
+
+movie_data <- movie_data |>
+              mutate(budget = ifelse(budget == 0, NA, budget),
+                     budget_missing = ifelse(is.na(budget),1,0)) |>
+              group_by(year) |>
+              mutate(budget = ifelse(is.na(budget),
+                                     median(budget, na.rm = TRUE),
+                                     budget)) |>
+              ungroup()
+```
 
 
+```{r deleting day}
+
+movie_data <- movie_data |>
+              mutate(release_YM = substr(released, 1,7))|>
+              select(-released)
+```
 
 
+```{r assigning countries to a region}
+
+movie_data <- movie_data |>
+  mutate(region = case_when(
+    country %in% 
+      c("USA", "Canada", "Mexico", "Bahamas", "Aruba", "Panama") ~ 
+      "North America",
+    country %in% 
+      c("Argentina", "Brazil", "Peru", "Chile", "Colombia", "Cuba", "Jamaica") ~
+      "South America",
+    country %in% 
+      c("UK", "Ireland", "France", "Belgium", "Netherlands", "Switzerland", 
+        "Austria", "Germany", "West Germany", "Portugal", "Italy", "Spain", 
+        "Malta") ~ "Western Europe",
+    country %in% 
+      c("Sweden", "Denmark", "Norway", "Finland", "Iceland") ~ "Northern Europe",
+    country %in% 
+      c("Hungary", "Czech Republic", "Poland", "Romania", "Ukraine", "Greece", 
+        "Soviet Union", "Russia") ~ "Eastern Europe",
+    country %in% 
+      c("Republic of Maccedonia", "Federal Republic of Yugoslavia") ~ 
+      "Southeastern Europe",
+    country %in% 
+      c("Israel", "Iran", "Palestine", "Saudi Arabia") ~ "Middle East",
+    country %in% 
+      c("Japan", "China", "Hong Kong", "Taiwan", "South Korea") ~ "East Asia",
+    country %in% 
+      c("India") ~ "South Asia",
+    country %in% 
+      c("Thailand", "Indonesia") ~ "Southeast Asia",
+    country %in% 
+      c("Australia", "New Zealand") ~ "Oceania",
+    country %in% 
+      c("South Africa", "Kenya") ~ "Africa"))
+
+movie_data$region <- as.factor(movie_data$region)
+```
 
 
+```{r frequency encoding}
+direc_freq <- movie_data |>
+    count(director, name = "direc_freq")
+
+movie_data <- movie_data |>
+         left_join(direc_freq, by = "director")
+
+comp_freq <- movie_data |>
+    count(company, name = "comp_freq")
+
+movie_data <- movie_data |>
+          left_join(comp_freq, by = "company")
 
 
-
-
-
-
-
-
-
-
-
+movie_data$direc_freq <- log1p(movie_data$direc_freq)
+movie_data$comp_freq <- log1p(movie_data$comp_freq)
+```
 
 
 
