@@ -5,7 +5,32 @@ output: pdf_document
 ---
 
 
+```{r seed}
+set.seed(445)
+```
 
+```{r libraries}
+library(broom)
+library(dplyr)
+library(readr)
+library(readxl)
+library(ggplot2)
+library(tidyr)
+library(tidyverse)
+library(glmnet)
+library(tree)
+library(randomForest)
+library(caret)
+library(rsample)
+library(tidymodels)
+library(workflows)
+library(recipes)
+```
+
+
+```{r dataset}
+movie_data <-  read.csv('Movie_Industry_1554_84.csv', fileEncoding = "latin1")
+```
 
 
 
