@@ -1,0 +1,129 @@
+---
+title: "GenreRateStars"
+author: "Kaitlynn"
+output: pdf_document
+---
+
+```{r setting up}
+set.seed(445)
+
+library(broom)
+library(dplyr)
+library(readr)
+library(readxl)
+library(ggplot2)
+library(tidyr)
+library(tidyverse)
+library(glmnet)
+library(tree)
+library(randomForest)
+library(caret)
+library(rsample)
+```
+
+```{r data}
+data <- read.csv('Movie_Industry_1554_84.csv')
+
+sum(is.na(data))  ## Making sure there is no NA data
+
+head(data)
+```
+
+
+Analyzing Genre, Rating, and Stars columns
+
+Genre: categorizes the movies' genres: action, adventure, animated, biography, comedy, crime, drama, family, fantasy, horror, musical, mystery, romance, sci-fi, thriller, war, western
+
+
+Rating: B, B15, G, NC-17, NOT RATED, Not specified, PG, PG-13, R, TV-14, TV-MA, TV-PG, UNRATED
+
+
+Stars: 2054 different stars, made a frequency table to show who is most frequently the star in the movie
+
+
+
+
+
+```{r frequencies}
+
+g_freq <- data %>%
+  count(genre) %>%
+  mutate(percent = round(100*n / sum(n), 2)) %>%
+  arrange(desc(percent))
+g_freq
+
+r_freq <- data %>%
+  count(rating) %>%
+  mutate(percent = round(100*n / sum(n), 2)) %>%
+  arrange(desc(percent))
+r_freq
+
+s_freq <- data %>%
+  count(star) %>%
+  mutate(percent = round(100*n / sum(n), 2)) %>%
+  arrange(desc(percent))
+s_freq
+```
+
+
+```{r plots, fig.height=6, fig.width=12}
+
+ggplot(data, aes(x = genre, y = ..prop.., group=1)) +
+  geom_bar(fill="blue") +
+  ylab("Frequency (Prop)") +
+  xlab("Genre") +
+  ggtitle("Genre Freq. (Top-Level")
+
+
+ggplot(data, aes(x = rating, y = ..prop.., group=1)) +
+  geom_bar(fill="red") +
+  ylab("Frequency (Prop)") +
+  xlab("Rating") +
+  ggtitle("Rating Freq.")
+
+```
+
+```{r star plot, fig.height=4, fig.width=10}
+
+tab <- table(data$star)
+top10 <- sort(tab, decreasing = TRUE)[1:10]
+rev_top10 <- rev(top10)
+top10_prop <- rev_top10 / sum(tab)
+
+barplot(top10_prop,
+        horiz = TRUE,
+        names.arg = names(top10_prop),
+        las = 1,
+        col = "gold",
+        main = "Star Frequencies (Top 10)",
+        xlab="Count")
+
+```
+
+
+```{r correlations, warning=FALSE}
+#chi-sq test
+chisq.test(table(data$genre, data$rating))
+chisq.test(table(data$genre, data$star))
+chisq.test(table(data$rating, data$star))
+```
+
+
+```{r, warning=FALSE}
+#contingency
+cntngcy <- function(x, y) {
+  tb1 <- table(x,y)
+  chi <- chisq.test(tb1)$statistic
+  n <- sum(tb1)
+  c <- sqrt(chi / (chi + n))
+  return(c)
+}
+
+cntngcy(data$genre, data$rating)
+cntngcy(data$genre, data$star)
+cntngcy(data$rating, data$star)
+
+```
+
+
+
