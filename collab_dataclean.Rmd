@@ -29,6 +29,7 @@ library(recipes)
 
 ```{r dataset}
 movie_data <-  read.csv('Movie_Industry_1554_84.csv', fileEncoding = "latin1")
+
 ```
 
 
@@ -42,14 +43,6 @@ movie_data <- movie_data |>
                                      median(budget, na.rm = TRUE),
                                      budget)) |>
               ungroup()
-```
-
-
-```{r deleting day}
-
-movie_data <- movie_data |>
-              mutate(release_YM = substr(released, 1,7))|>
-              select(-released)
 ```
 
 
@@ -109,6 +102,79 @@ movie_data <- movie_data |>
 movie_data$direc_freq <- log1p(movie_data$direc_freq)
 movie_data$comp_freq <- log1p(movie_data$comp_freq)
 ```
+
+```{r}
+head(movie_data)
+```
+
+
+```{r month_clean} 
+
+for (i in seq_len(nrow(movie_data))) {
+  date_value <- movie_data$released[i]
+  
+  if (grepl("-", date_value)) {
+    movie_data$released[i] <- as.integer(substr(date_value, 6, 7))
+  } 
+  else {
+    month_chr <- sub("/.*", "", date_value)
+    movie_data$released[i] <- as.integer(month_chr)
+  }
+}
+
+names(movie_data)[names(movie_data) =="released"] <-"release_month"
+```
+
+```{r assign_season}
+
+movie_data$season <-cut(
+  as.numeric(movie_data$release_month),
+  breaks = c(0,2, 5, 8, 11, 12),
+  labels = c("Winter", "Spring", "Summer", "Fall", "Winter")
+)
+
+```
+
+```{r title_sentiment_analysis}
+afinn <- get_sentiments("afinn")
+
+movie_data$name <- iconv(movie_data$name, from = "", to = "ASCII//TRANSLIT", sub = "")
+
+movie_data_title <- movie_data %>%
+  mutate(id = row_number())
+
+title_afinn <- movie_data_title %>%
+  select(id, name) %>%
+  unnest_tokens(word, name) %>%
+  inner_join(afinn, by = "word") %>%
+  group_by(id) %>%
+  summarize(afinn_score = sum(value), .groups = "drop")
+
+movie_data_title <- movie_data_title %>%
+  left_join(title_afinn, by = "id") %>%
+  mutate(afinn_score = replace_na(afinn_score, 0))
+
+punct_intensity <- numeric(nrow(movie_data_title))
+
+for (i in seq_len(nrow(movie_data_title))) {
+  title_raw <- movie_data_title$name[i]
+  if (is.na(title_raw)) {
+    punct_intensity[i] <- 0
+  } 
+  else {
+    exclaim_count  <- lengths(regmatches(title_raw, gregexpr("!",  title_raw)))
+    question_count <- lengths(regmatches(title_raw, gregexpr("\\?", title_raw)))
+    score_punct    <- 0.5 * exclaim_count - 0.5 * question_count
+    punct_intensity[i] <- score_punct
+  }
+}
+
+movie_data_title$sentiment_best <- movie_data_title$afinn_score + punct_intensity
+
+movie_data <- movie_data_title
+
+```
+
 
 
 
