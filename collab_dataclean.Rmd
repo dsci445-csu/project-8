@@ -24,6 +24,7 @@ library(rsample)
 library(tidymodels)
 library(workflows)
 library(recipes)
+library(tidytext)
 ```
 
 
@@ -39,7 +40,7 @@ movie_data <- movie_data |>
               mutate(budget = ifelse(budget == 0, NA, budget),
                      budget_missing = ifelse(is.na(budget),1,0)) |>
               group_by(year) |>
-              mutate(budget = ifelse(is.na(budget),
+              mutate(budget = ifelse(is.na(budget) | budget == 0,
                                      median(budget, na.rm = TRUE),
                                      budget)) |>
               ungroup()
@@ -174,7 +175,22 @@ movie_data_title$sentiment_best <- movie_data_title$afinn_score + punct_intensit
 movie_data <- movie_data_title
 
 ```
+```{r binning director writer and star}
+movie_data <- movie_data %>%
+  add_count(writer, name = "writer_count") %>% 
+  mutate(writer_popularity = ntile(writer_count, 5)) %>%
+  
+  add_count(director, name = "director_count") %>% 
+  mutate(director_popularity = ntile(director_count, 5)) %>%
+  
+  add_count(star, name = "star_count") %>% 
+  mutate(star_popularity = ntile(star_count, 5)) 
 
+```
+
+```{r}
+write_csv(movie_data, "clean_movie_data.csv")
+```
 
 
 
