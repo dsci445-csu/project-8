@@ -136,9 +136,24 @@ cntngcy(data$rating, data$star)
 
 ```{r}
 ds <- read.csv("clean_movie_data.csv")
-y <- ds$gross
+df <- na.omit(ds)
+y <- df$gross
 
+predictors <- df[, !names(df) %in% c("gross","movie_title","id")]
 
+X <- model.matrix(~ ., data=predictors)[, -1]
 
+cv_lasso <- cv.glmnet(x=X, y=y, alpha=1, standardize = TRUE)
+cv_lasso$lambda.min
+cv_lasso$lambda.max
 
+coef_lasso <- coef(cv_lasso, s="lambda.min")
+coef_lasso[coef_lasso != 0]
+
+pred <- predict(cv_lasso, newx=X, s="lambda.min")
 ```
+
+
+
+
+
