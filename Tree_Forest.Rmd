@@ -1,0 +1,179 @@
+---
+title: "Tree_Forest"
+output: html_document
+---
+
+```{r}
+set.seed(567)
+library(tidyverse)
+library(embed)
+library(kerasnip)
+library(tidymodels)
+library(ranger)
+library(xgboost)
+library(doParallel)
+```
+```{r multicore stuff to hopefully run faster}
+# Check total available cores on your machine
+all_cores <- parallel::detectCores(logical = FALSE) 
+
+# Recommended: Leave 2 cores free for the operating system and RStudio itself
+# This prevents RAM over-allocation and system crashes.
+safe_cores <- all_cores - 2
+
+# Create the cluster (if safe_cores > 0)
+if (safe_cores > 0) {
+    cl <- makePSOCKcluster(safe_cores) 
+    registerDoParallel(cl)
+    cat(paste("Running on", safe_cores, "cores."))
+} else {
+    cat("Running sequentially (single core).")
+}
+```
+
+
+```{r cleaning}
+movies_fresh <- read.csv("Movie_Industry_1554_84.csv")
+
+#fills and flags zero/na budgets 
+movies_fresh <- movies_fresh |> 
+  mutate(date_obj = parse_date_time(released, orders = c("ymd", "mdy", "dmy", "my" ,"ym", "y"))) %>% # defaults unknown months to jan
+  mutate(
+    year = year(date_obj), 
+    release_month = month(date_obj, label = TRUE, abbr = FALSE)  %>% as.factor()
+  ) %>%
+  select(-date_obj, -released) %>% 
+        mutate(budget = ifelse(budget == 0, NA, budget),
+               budget_missing = ifelse(is.na(budget),1,0)) |>
+        group_by(year) |>
+        mutate(budget = ifelse(is.na(budget) | budget == 0,
+                               median(budget, na.rm = TRUE),
+                               budget)) |>
+              ungroup() %>% 
+  mutate(across(
+    c(company, country, director, name, star, writer),
+    ~ .x %>% 
+        str_replace_all("[^a-zA-Z0-9 ]", " ") %>% 
+        str_squish())) 
+sum(is.na(movies_fresh))
+
+```
+
+```{r data prep}
+#Strata forces the distritbution of gross to be equal across train/test
+data_split <- initial_split(movies_fresh, prop = 0.75, strata = gross)
+train_data <- training(data_split)
+test_data  <- testing(data_split)
+folds <- vfold_cv(train_data, v = 5)
+
+high_card_cols <- c("director", "company", "writer", "star", "country")
+
+movie_rec <- recipe(gross ~ ., data = train_data) %>%
+  update_role(name, new_role = "id") %>%
+  step_string2factor(all_nominal_predictors()) %>%
+  step_unknown(release_month, genre, rating) %>%
+  step_novel(release_month, genre, rating) %>% # makes the code not break when something new is in test
+  step_unorder(release_month) %>%
+  step_mutate(rating = fct_collapse(rating, NR = c("UNRATED", "Not specified", "NOT RATED", 
+         "TV-PG", "TV-MA", "TV-14", "B", "B15"))) %>% # Drops junk and weird categories 
+  #low cardinally nominal predictors
+  step_dummy(release_month, genre, rating,) %>% 
+  #high cardinality nominals
+  step_lencode_mixed(director, company, writer, star, country, 
+    outcome = vars(gross)) %>% 
+  step_rm(X)
+
+prepped_recipe <- prep(movie_rec, training = train_data)
+processed_data <- bake(prepped_recipe, new_data = NULL)
+```
+
+```{r model specs}
+forest_spec <- rand_forest(
+  trees = 1000,
+  mtry = tune(),
+  min_n =  tune()) %>%
+  set_engine("ranger") %>% 
+  set_mode("regression")
+
+
+boost_spec <- boost_tree(
+  learn_rate = tune(),
+  tree_depth = tune(),
+  min_n = tune(),
+  trees = 1000) %>%
+  set_engine('xgboost') %>%
+  set_mode("regression")
+
+
+```
+
+```{r workflows}
+forest_workflow <- workflow() %>% 
+  add_recipe(movie_rec) %>% 
+  add_model(forest_spec)
+
+boost_workflow <- workflow() %>% 
+  add_recipe(movie_rec) %>% 
+  add_model(boost_spec)
+```
+
+```{r forest}
+forest_params <- extract_parameter_set_dials(forest_workflow) %>%
+  update(mtry = mtry(range = c(1, 45)))
+
+forest_inital_results <- tune_grid(
+  forest_workflow,
+  resamples = folds,
+  grid = 5,
+  control = control_grid(save_pred = TRUE)
+)
+
+forest_results <- tune_bayes(
+  forest_workflow, 
+  resamples = folds,
+  iter = 20,
+  initial = forest_inital_results,
+  param_info = forest_params,
+  control = control_bayes(no_improve = 10, save_pred = T)
+)
+
+```
+
+```{r Boosted}
+
+boost_initial_grid <- grid_latin_hypercube( # just a cube technically 
+  tree_depth(),
+  min_n(), 
+  learn_rate(),
+  size = 10)
+
+boost_initial_results <- tune_grid(
+  boost_workflow,
+  resamples = folds,
+  grid = boost_initial_grid,
+  control = control_grid(save_pred = TRUE)
+)
+
+boost_result <- tune_bayes(
+  boost_workflow, 
+  resamples = folds,
+  iter = 20,
+  initial = boost_initial_results,
+  control = control_bayes(no_improve = 10, save_pred = T)
+)
+```
+
+
+```{r}
+autoplot(forest_results)
+```
+```{r}
+print(boost_result)
+
+```
+```{r}
+summary(movies_fresh$gross)
+```
+
+
+
