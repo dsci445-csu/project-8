@@ -54,7 +54,9 @@ movies_fresh <- movies_fresh |>
     c(company, country, director, name, star, writer),
     ~ .x %>% 
         str_replace_all("[^a-zA-Z0-9 ]", " ") %>% 
-        str_squish())) 
+        str_squish())) %>%
+  mutate(gross = log(gross)) %>%
+  mutate(budget = log(budget))
 sum(is.na(movies_fresh))
 
 ```
@@ -89,7 +91,7 @@ processed_data <- bake(prepped_recipe, new_data = NULL)
 
 ```{r model specs}
 forest_spec <- rand_forest(
-  trees = 1000,
+  trees = 100,
   mtry = tune(),
   min_n =  tune()) %>%
   set_engine("ranger") %>% 
@@ -100,7 +102,7 @@ boost_spec <- boost_tree(
   learn_rate = tune(),
   tree_depth = tune(),
   min_n = tune(),
-  trees = 1000) %>%
+  trees = 100) %>%
   set_engine('xgboost') %>%
   set_mode("regression")
 
@@ -117,7 +119,7 @@ boost_workflow <- workflow() %>%
   add_model(boost_spec)
 ```
 
-```{r forest}
+```{r tuning}
 forest_params <- extract_parameter_set_dials(forest_workflow) %>%
   update(mtry = mtry(range = c(1, 45)))
 
@@ -137,15 +139,12 @@ forest_results <- tune_bayes(
   control = control_bayes(no_improve = 10, save_pred = T)
 )
 
-```
-
-```{r Boosted}
 
 boost_initial_grid <- grid_latin_hypercube( # just a cube technically 
   tree_depth(),
   min_n(), 
   learn_rate(),
-  size = 10)
+  size = 5)
 
 boost_initial_results <- tune_grid(
   boost_workflow,
@@ -164,15 +163,103 @@ boost_result <- tune_bayes(
 ```
 
 
-```{r}
-autoplot(forest_results)
-```
-```{r}
-print(boost_result)
 
+```{r results code for not log transformed}
+autoplot(forest_results)
+autoplot(boost_result)
+```
+
+```{r results}
+best_config <- show_best(boost_result, metric = "rmse", n = 1) %>% 
+  select(.config)
+
+full_metrics_boost <- collect_metrics(boost_result)
+final_winner_metrics_boost <- full_metrics_boost %>%
+  filter(.config == best_config$.config)
+
+full_metrics_forest <- collect_metrics(forest_results)
+final_winner_metrics_forest <- full_metrics_forest %>%
+  filter(.config == best_config$.config)
+
+print(final_winner_metrics_forest)
+print(final_winner_metrics_boost)
+```
+
+```{r final fit}
+best_params_rf <- select_best(forest_results, metric = "rmse")
+final_forest_workflow <- forest_workflow %>%
+  finalize_workflow(best_params_rf) %>% 
+  
+  # OVERRIDE: Set the final tree count to 1000 for maximum accuracy
+  update_model(
+    rand_forest(trees = 1000) %>% 
+      set_engine("ranger") %>% 
+      set_mode("regression")
+  )
+
+final_fit_results <- last_fit(final_forest_workflow, split = data_split)
+```
+
+```{r}
+final_test_metrics <- collect_metrics(final_fit_results)
+print("Final Test Set Metrics:")
+print(final_test_metrics)
+```
+
+```{r}
+# 1. Create the Dollar Dataframe (Convert Log -> Dollars)
+final_predictions_dollars <- collect_predictions(final_fit_results) %>%
+  mutate(
+    pred_dollars = exp(.pred), 
+    gross_dollars = exp(gross) 
+  ) %>%
+  # Join with test data to get the 'score' back for plotting
+  bind_cols(testing(data_split) %>% select(score))
+
+# 2. Calculate TRUE Dollar RMSE (for the subtitle)
+dollar_rmse <- final_predictions_dollars %>%
+  metrics(truth = gross_dollars, estimate = pred_dollars) %>%
+  filter(.metric == "rmse") %>%
+  pull(.estimate)
+
+# 3. Generate the Plot with Coloring
+predicted_vs_actual_plot <- final_predictions_dollars %>%
+  ggplot(aes(x = gross_dollars, y = pred_dollars, color = score)) + # <--- ADDED COLOR HERE
+    
+    # Points
+    geom_point(alpha = 0.6, size = 2, color = "blue") +
+    
+    # Perfect fit line
+    geom_abline(lty = 2, color = "red", size = 1.2) +
+
+    
+    # Log Scales for Axes (Keeps dollars readable)
+    scale_x_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+    scale_y_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+    
+    # Aesthetics
+    labs(
+        title = "Random Forest: Predicted vs. Actual Revenue",
+        subtitle = paste0("R-Squared: ", round(final_test_metrics$.estimate[final_test_metrics$.metric == "rsq"], 3), 
+                          " | True Dollar RMSE: ", scales::dollar(dollar_rmse)),
+        x = "Actual Gross Revenue",
+        y = "Predicted Gross Revenue"
+    ) +
+    coord_fixed() + 
+    theme_minimal()
+
+print(predicted_vs_actual_plot)
+```
+
+```{r}
+raw_gross <- movies_fresh %>% 
+  select(gross) %>%
+  mutate(gross = exp(gross))
+summary(raw_gross)
 ```
 ```{r}
-summary(movies_fresh$gross)
+linear <- lm(gross ~budget, data = processed_data)
+summary(linear)
 ```
 
 
