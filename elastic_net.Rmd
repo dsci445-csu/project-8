@@ -1,0 +1,201 @@
+---
+title: "elastic_net"
+author: "robin"
+output: pdf_document
+---
+
+```{r seed}
+set.seed(445)
+```
+
+```{r libraries}
+library(broom)
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(readxl)
+library(ggplot2)
+library(tidyr)
+library(tidyverse)
+library(glmnet)
+library(tree)
+library(randomForest)
+library(caret)
+library(rsample)
+library(tidymodels)
+library(workflows)
+library(recipes)
+library(glmnet)
+library(yardstick)
+library(Matrix)
+## all the friggin libraries you can think of
+```
+
+```{r clean dataframe}
+## load in collaborative dataframe from team cleaning
+clean_data <- read_csv("clean_movie_data.csv") 
+
+
+## removing columns that are repeats/not predictors (id)
+clean_data <- clean_data |>
+  select(-c("X", "country", "director", "name", "writer", 
+            "company", "star", "id", "budget_missing", "year", 
+            "release_month", "writer_count", "director_count", 
+            "direc_freq","star_count"))
+
+## Collapsing rating, more digestible, better for dummy encoding
+clean_data <- clean_data |>
+              mutate(rating = ifelse(rating %in% c("UNRATED", "NOT RATED", 
+                                                   "Not specified"), 
+                                     "Unknown", rating))
+## log transforming gross, helping w skew
+clean_data <- clean_data |>
+  mutate(gross = log(gross + 1))
+```
+
+
+In charge of elastic net method. (Uses ridge regression and LASSO penalties)
+
+```{r modelllll}
+
+## net recipe, and making sure the other numeric values are log transformed
+## to maintain consistency w gross.
+## all the steps are to ensure glmnet works
+net_recipe <- recipe(gross ~ ., data = clean_data) |>
+  step_mutate(budget = log(budget+1),
+              votes = log(votes +1),
+              comp_freq = log(comp_freq + 1),
+              runtime = log(runtime + 1),
+              score = log(score + 1),
+              writer_popularity = log(writer_popularity + 1),
+              director_popularity = log(director_popularity +1),
+              star_popularity = log(star_popularity + 1)) |>
+  step_novel(all_nominal_predictors()) |> ## takes care of factor lvls
+  step_unknown(all_nominal_predictors()) |> ## handles missing vals. 
+  step_dummy(rating, genre, region, season) |> ## categorical vars.
+  step_zv(all_predictors()) |> ## removes zero-variance col.
+  step_normalize(all_numeric_predictors()) ## standardizes
+  
+## elastic net model w ridge and lasso penalties, tune() being chosen
+elast_net <- linear_reg(penalty = tune(), mixture = tune()) |>
+  set_engine("glmnet") 
+
+## puts all the steps together 
+net_workflow <- workflow() |>
+  add_recipe(net_recipe) |>
+  add_model(elast_net)
+
+
+## splits data into train and test 10 fold cross valdation time. 
+folds <- vfold_cv(clean_data, v = 10)
+
+## range for potential lambda and alpha, 10 evenly spaced pts.
+grid_net <- grid_regular(penalty(),
+                         mixture(range = c(0,1)),
+                         levels = 20)
+
+## trying different lambda and alpha --> hyperparameters
+## penalty (lambda) controls shrinkage
+## mixture (alpha) controls type of shrinkage 
+##   alpha = 1 is lasso alpha = 0 is ridge and anything in between is elastic net :D
+tuned_results <- tune_grid(net_workflow,
+                           resamples = folds,
+                           grid = grid_net,
+                           control = control_grid(save_pred = TRUE))
+
+
+## finding best lambda and alpha
+best_parameters <- tuned_results |>
+  select_best(metric = "rmse")
+best_parameters
+
+## only using the best parameters found
+final_net <- finalize_workflow(net_workflow, best_parameters)
+
+## resultt
+final_fit <- fit(final_net, data = clean_data)
+```
+
+## Elastic Net Good:
+- even if some predictors were correlated, the model reduces redundancy.
+- gets rid of noisy predictors
+- zeros out irrelevant variables and handles multicollinearity
+
+Goal: lowest rmse for best predictive performance.
+
+```{r predictions and rmse}
+## prediction using the best lambda and alpha compare to og data
+preds <- predict(final_fit, clean_data) |>
+  bind_cols(clean_data)
+
+head(preds)
+
+## want rmse and rsq, indicative of quality of prediction model
+rmse(preds, truth = gross, estimate = .pred)
+rsq(preds, truth = gross, estimate = .pred)
+
+## 9.94%, meaning predictions are off by about 10%
+1.56/(mean(clean_data$gross))
+
+```
+
+
+```{r coeffs}
+
+## The actual fitted glmnet model that contains all the coefficients, ignores the workflow stuff
+glm_fit <- extract_fit_parsnip(final_fit)$fit
+
+## best lambda
+lambda_used <- best_parameters$penalty
+
+## coefficients of the fitted model w the best lambda
+coefs <- coef(glm_fit, s = lambda_used)
+
+## matrix of the predictors and their coefficients
+coef_dense <- as.matrix(coefs)
+
+## Removes any predictors that had the value 0 for their coefficients and removes Intercept coefficient
+non_z_co <- coef_dense[coef_dense[,1] != 0 & rownames(coef_dense) != "(Intercept)", , drop = FALSE]
+
+## Putting it into a dataframe
+coef_df <- data.frame(predictor = rownames(non_z_co),
+                      coefficient = non_z_co[,1])
+
+coef_df
+```
+
+
+```{r residuals v fitted}
+
+predic_vals <- predict(final_fit, clean_data)$.pred
+net_resid <- clean_data$gross - predic_vals
+
+res_fit <- data.frame(res = net_resid, fit = predic_vals)
+
+res_fit_plot <- ggplot(data = res_fit, mapping = aes(x = predic_vals,
+                                                     y = net_resid)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "darkred") +
+  theme_minimal() + 
+  labs(title = "Residuals vs Fitted",
+       x = "Fitted Vals",
+       y = "Residuals")
+
+res_fit_plot
+
+## Observations: Linear, but pretty chunky. non-constant variance of residuals. 
+```
+
+```{r QQplot}
+
+## Left tail skew, BAD. conveys non-normality. 
+qqnorm(net_resid)
+qqline(net_resid, col = "darkred")
+```
+
+
+
+
+
+
+
