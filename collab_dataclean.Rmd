@@ -105,7 +105,7 @@ movie_data$comp_freq <- log1p(movie_data$comp_freq)
 ```
 
 ```{r}
-head(movie_data)
+head(movie_data, 200)
 ```
 
 
@@ -117,13 +117,19 @@ for (i in seq_len(nrow(movie_data))) {
   if (grepl("-", date_value)) {
     movie_data$released[i] <- as.integer(substr(date_value, 6, 7))
   } 
-  else {
+  
+  else if (grepl("/", date_value)) {
     month_chr <- sub("/.*", "", date_value)
     movie_data$released[i] <- as.integer(month_chr)
   }
+  else {
+    movie_data$released[i] <- NA_integer_
+  }
+  
 }
 
 names(movie_data)[names(movie_data) =="released"] <-"release_month"
+
 ```
 
 ```{r assign_season}
@@ -175,6 +181,7 @@ movie_data_title$sentiment_best <- movie_data_title$afinn_score + punct_intensit
 movie_data <- movie_data_title
 
 ```
+
 ```{r binning director writer and star}
 movie_data <- movie_data %>%
   add_count(writer, name = "writer_count") %>% 
