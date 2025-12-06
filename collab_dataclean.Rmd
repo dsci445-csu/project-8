@@ -142,6 +142,7 @@ movie_data$season <-cut(
 
 ```
 
+
 ```{r title_sentiment_analysis}
 afinn <- get_sentiments("afinn")
 
