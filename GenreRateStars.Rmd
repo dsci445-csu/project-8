@@ -135,18 +135,28 @@ cntngcy(data$rating, data$star)
 ## LASSO
 
 ```{r}
+# data
 ds <- read.csv("clean_movie_data.csv")
 df <- na.omit(ds)
+
+# response var
 y <- df$gross
 
-predictors <- df[, !names(df) %in% c("gross","movie_title","id")]
+# predictors 
+predictors <- df %>% select(-gross, -id)
+predictors$genre <- as.factor(predictors$genre)
+predictors$rating <- as.factor(predictors$rating)
+predictors$star <- as.factor(predictors$star)
 
+# model matrix
 X <- model.matrix(~ ., data=predictors)[, -1]
 
+# cv lasso
 cv_lasso <- cv.glmnet(x=X, y=y, alpha=1, standardize = TRUE)
-cv_lasso$lambda.min
-cv_lasso$lambda.max
+lamb_min <- cv_lasso$lambda.min
+lamb_1se <- cv_lasso$lambda.1se
 
+# coefs at lasso min
 coef_lasso <- coef(cv_lasso, s="lambda.min")
 coef_lasso[coef_lasso != 0]
 
