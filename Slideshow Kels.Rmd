@@ -10,6 +10,9 @@ output:
 ```{r setup, include=FALSE}
 set.seed(445)
 knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(tidymodels)
+clean_data <- read_csv("clean_movie_data.csv")
 ```
 ## Introduction
 
