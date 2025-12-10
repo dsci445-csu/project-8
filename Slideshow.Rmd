@@ -1,5 +1,5 @@
 ---
-title: "Slideshow"
+title: "Slideshow-Kelsey"
 subtitle: "DSCI 445"
 author: "Group 8: Kelsey Britton, James Chinnery, Robin Thrush, Kaitlynn Walston"
 output: 
