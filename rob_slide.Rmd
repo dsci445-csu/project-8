@@ -1,0 +1,34 @@
+---
+title: "rob_slides"
+output: ioslides_presentation:
+  css: styles.css
+---
+
+```{r setup, include=FALSE, message= FALSE}
+set.seed(445)
+knitr::opts_chunk$set(echo = FALSE)
+library(tidymodels)
+library(dplyr)
+library(ggplot2)
+```
+
+## R Markdown
+
+## Method: Elastic Net
+
+- Reminder:
+Elastic Net is a shrinkage model that
+
+
+- Why:
+
+
+
+- What Predictors were most influential (told by model)
+
+
+- Model Stats:
+R^2 = 
+RMSE = 
+MAE = 
+
