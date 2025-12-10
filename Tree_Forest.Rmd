@@ -315,4 +315,7 @@ ggplot(plot_data_binned, aes(x = avg_budget, y = bin_rmse)) +
 ```
 
 
+```{r}
+saveRDS(final_fit_results, "final_rf_results.rds") 
+```
 
