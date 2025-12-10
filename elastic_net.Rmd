@@ -6,7 +6,6 @@ output: pdf_document
 
 ```{r seed}
 set.seed(445)
-33
 ```
 
 ```{r libraries}
