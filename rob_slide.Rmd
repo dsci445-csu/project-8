@@ -17,18 +17,29 @@ library(ggplot2)
 ## Method: Elastic Net
 
 - Reminder:
-Elastic Net is a shrinkage model that
+Elastic Net is a shrinkage model that combines LASSO and Ridge Regression penalties.
+
+- Why it would profit to use this method: 
+It's okay if predictors are highly correlated, avoids overfitting and manages model complexity.
+
+- How: 
+Log transformed all numeric predictors (and the response variable)
+Dummy encoded the factorable variables: Genre, Region, Rating and Season
+
+Performed 10 fold cross-validation and let that select lambda and alpha values. 
 
 
-- Why:
 
 
 
-- What Predictors were most influential (told by model)
+- Strongest predictors:
+
+- Moderate Predictors:
+
+- Predictors that shrunk to 0:
 
 
 - Model Stats:
 R^2 = 
 RMSE = 
 MAE = 
-
