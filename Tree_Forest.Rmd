@@ -262,5 +262,60 @@ linear <- lm(gross ~budget, data = processed_data)
 summary(linear)
 ```
 
+```{r}
+# 2. Calculate MAE
+mae_metric <- final_predictions_dollars %>%
+  metrics(truth = gross_dollars, estimate = pred_dollars) %>%
+  filter(.metric == "mae") %>%
+  pull(.estimate)
 
+print(paste("Final Test MAE:", scales::dollar(mae_metric)))
+
+```
+```{r}
+library(tidyverse)
+library(scales)
+
+# 1. Prepare Data: Join predictions with the original 'budget' column
+plot_data_binned <- final_predictions_dollars %>%
+  bind_cols(testing(data_split) %>% select(budget)) %>% # Bring back budget
+  mutate(
+    # Create 10 Bins (Deciles) based on Budget
+    # This groups the cheapest 10% together, the next 10%, etc.
+    budget_bin = ntile(budget, 10) 
+  ) %>%
+  # Calculate RMSE for EACH bin separately
+  group_by(budget_bin) %>%
+  summarise(
+    bin_rmse = rmse_vec(truth = gross_dollars, estimate = pred_dollars),
+    avg_budget = mean(budget), # To plot on X-axis
+    n_movies = n() # Just to verify we have enough data per bin
+  )
+
+# 2. Plot RMSE trend
+ggplot(plot_data_binned, aes(x = avg_budget, y = bin_rmse)) +
+  
+  # The Line Trend
+  geom_line(color = "#2c3e50", size = 1) +
+  geom_point(color = "#e74c3c", size = 3) +
+  
+  # Scales
+  scale_x_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  scale_y_continuous(labels = label_dollar(scale_cut = cut_short_scale())) +
+  
+  # Labels
+  labs(
+    title = "Does Money Bring Problems?",
+    subtitle = "RMSE (Error Variance) increases as Budget increases",
+    x = "Average Budget (Log Scale)",
+    y = "RMSE (Model Error)"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r}
+saveRDS(final_fit_results, "final_rf_results.rds") 
+```
 

@@ -2,7 +2,8 @@
 title: "Slideshow"
 subtitle: "DSCI 445"
 author: "Group 8: Kelsey Britton, James Chinnery, Robin Thrush, Kaitlynn Walston"
-output: ioslides_presentation
+output: ioslides_presentation:
+  incremental: true
 ---
 
 ```{r setup, include=FALSE}
