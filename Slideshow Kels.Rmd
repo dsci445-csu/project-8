@@ -7,15 +7,78 @@ output:
     css: styles.css
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message = FALSE}
 set.seed(445)
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(tidymodels)
 library(knitr)
 library(kableExtra)
+library(dplyr)
+library(ggplot2)
 clean_data <- read_csv("clean_movie_data.csv")
 source("linreg.R")
+```
+
+```{r robin - code I need for the plots to work, include = FALSE}
+clean_data <- read_csv("clean_movie_data.csv") 
+clean_data <- clean_data |>
+  select(-c("X", "country", "director", "name", "writer", 
+            "company", "star", "id", "budget_missing", "year", 
+            "release_month", "writer_count", "director_count", 
+            "direc_freq","star_count"))
+clean_data <- clean_data |>
+              mutate(rating = ifelse(rating %in% c("UNRATED", "NOT RATED", 
+                                                   "Not specified"), 
+                                     "Unknown", rating))
+clean_data <- clean_data |>
+  mutate(gross = log(gross + 1))
+net_recipe <- recipe(gross ~ ., data = clean_data) |>
+  step_mutate(budget = log(budget+1),
+              votes = log(votes +1),
+              comp_freq = log(comp_freq + 1),
+              runtime = log(runtime + 1),
+              score = log(score + 1),
+              writer_popularity = log(writer_popularity + 1),
+              director_popularity = log(director_popularity +1),
+              star_popularity = log(star_popularity + 1)) |>
+  step_novel(all_nominal_predictors()) |> ## takes care of factor lvls
+  step_unknown(all_nominal_predictors()) |> ## handles missing vals. 
+  step_dummy(rating, genre, region, season) |> ## categorical vars.
+  step_zv(all_predictors()) |> ## removes zero-variance col.
+  step_normalize(all_numeric_predictors()) ## standardizes
+elast_net <- linear_reg(penalty = tune(), mixture = tune()) |>
+  set_engine("glmnet") 
+
+net_workflow <- workflow() |>
+  add_recipe(net_recipe) |>
+  add_model(elast_net)
+folds <- vfold_cv(clean_data, v = 10)
+grid_net <- grid_regular(penalty(),
+                         mixture(range = c(0,1)),
+                         levels = 20)
+the_metrics <- metric_set(rmse, rsq, mae)
+tuned_results <- tune_grid(net_workflow,
+                           resamples = folds,
+                           grid = grid_net,
+                           control = control_grid(save_pred = TRUE),
+                           metrics = the_metrics)
+best_parameters <- tuned_results |>
+  select_best(metric = "rmse")
+final_net <- finalize_workflow(net_workflow, best_parameters)
+final_fit <- fit(final_net, data = clean_data)
+
+preds <- predict(final_fit, clean_data) |>
+  bind_cols(clean_data)
+glm_fit <- extract_fit_parsnip(final_fit)$fit
+lambda_used <- best_parameters$penalty
+
+coefs <- coef(glm_fit, s = lambda_used)
+coef_dense <- as.matrix(coefs)
+non_z_co <- coef_dense[coef_dense[,1] != 0 & 
+                         rownames(coef_dense) != "(Intercept)", , drop = FALSE]
+coef_df <- data.frame(predictor = rownames(non_z_co),
+                      coefficient = non_z_co[,1])
 ```
 
 ## Introduction
@@ -96,4 +159,139 @@ ggplot(plot_df, aes(x = Actual, y = Predicted)) +
   ) +
   theme_minimal()
 ```
+
+
+
+## Method & Motivation: 
+**Elastic Net** 
+
+- Reminder:
+Elastic Net is a shrinkage model that combines LASSO and Ridge Regression
+penalties.
+
+- Why Elastic Net:
+Large amount of predictors that aren't meaningful are dropped
+Handles collinearity well like assuming comp_freq and director popularity
+Able to rank predictors
+Stabilize coefficients of correlated predictors
+
+Since main goal was to identify strongest predictors, we did not remove 
+possible correlated terms and did not create interaction terms. 
+
+
+## Handling Data: 
+
+- How: 
+** Log transformed gross (response variable) 
+** Log +1 transformed all numeric predictors 
+** Dummy encoded the categorical variables: Genre, Region, Rating and Season
+
+10 fold cross-validation 
+
+## Hyperparameter Tuning:
+
+Grid of 400 different combos of alpha and lambda
+Each combo used to compute metrics for RMSE, MAE, and R^2
+
+The best RMSE (lowest CV RMSE) was pulled out and revealed the ideal lambda and 
+alpha values. 
+
+Finally we are able to pass this back to the workflow and come up with the best 
+elastic net model. 
+
+**Cross Validation:**
+Best Lambda: 0.02636651
+Best Alpha: 0.4736842
+RMSE: 1.575973  
+R^2: 0.584
+MAE: 1.13
+
+```{r MAECV}
+exp(1.13)
+```
+
+
+## Prediction Model: 
+**Prediction:**
+RMSE: 1.564085	
+R^2 : 0.5909
+MAE: 1.120881
+
+```{r MAEPred}
+exp(1.12)
+```
+
+The RMSE from cross-validation (1.57) and RMSE from prediction (1.56) are very 
+close, indicating the model is stable and not overfitting.
+
+```{r avg prediction err}
+1.564085/mean(clean_data$gross)
+```
+
+The RMSE relative to the average gross is abt. 10%. AKA the 
+model predicts movie revenue with roughly +/- 10% accuracy.
+
+```{r actual v pred visual}
+act_pred <- ggplot(data = preds, mapping = aes(x = gross, y = .pred)) +
+  geom_point(alpha = 0.2) +
+  geom_abline(intercept = 0, slope = 1, color = "darkred") + 
+  labs(title = "Actual VS Predicted Gross",
+       x = "Actual Log Gross",
+       y = "Predicted Log Gross") 
+act_pred
+```
+
+## Predictors:
+
+Total predictors: 53
+
+Leftover: 39 and Shrunk to Zero: 14
+
+### Strongest predictors:
+- Votes (0.966)
+- comp_freq (0.444)
+- rating_Unknown (-0.441)
+
+### Moderate Predictors:
+- Director_popularity (0.225)
+- Runtime (0.179)
+- Budget (0.113)
+
+
+### Predictors that shrunk to 0:
+- sentiment
+- Oceania
+- genre: Musical
+
+```{r predictor barplot}
+
+coef_df <- coef_df |>
+  mutate(abs_coef = abs(coefficient)) |>
+  arrange(desc(abs_coef))
+
+top_coef <- coef_df |>
+  filter(rank(-abs_coef) <= 15)
+
+bar_pred <- ggplot(data = top_coef, aes(x = reorder(predictor, abs_coef), 
+                                        y = abs_coef, fill = coefficient > 0)) + 
+  geom_col() + 
+  coord_flip() + 
+  scale_fill_manual(values = c("darkred", "darkgreen"), 
+                    labels = c("Negative", "Positive")) +
+  labs(title = "Predictor Importance",
+       x = "Predictor",
+       y = "Coefficient Magnitude",
+       fill = "Coefficient Sign")
+bar_pred
+```
+
+
+## Elastic Net Takeaway:
+
+- Identified important predictors
+- Predicts movie gross within ~10% of the actual gross
+- High-gross movies are predicted more accurately than low-gross movies
+- Demonstrates stability as it performs very similarly between cross-validation
+and full-data predictions. 
+
 
