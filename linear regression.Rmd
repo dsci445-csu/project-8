@@ -68,6 +68,10 @@ sig_preds <- tidy(lm_full) %>%
 
 sig_preds
 ```
+```{r}
+mae_dollars <- mean(abs(obs_dollars - preds_dollars))
+mae_dollars
+```
 
 
 
