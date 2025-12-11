@@ -95,8 +95,6 @@ Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, 
       - Bagged & Boosted Trees  
 **Focus: Which predictors influence revenue the most, and which model performs best?**
 
-
-
 ## Data Cleaning
 
 **Date**
