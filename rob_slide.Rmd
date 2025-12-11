@@ -23,23 +23,71 @@ Elastic Net is a shrinkage model that combines LASSO and Ridge Regression penalt
 It's okay if predictors are highly correlated, avoids overfitting and manages model complexity.
 
 - How: 
-Log transformed all numeric predictors (and the response variable)
-Dummy encoded the factorable variables: Genre, Region, Rating and Season
+** Log transformed gross (response variable)
+** Log +1 transformed all numeric predictors 
+** Dummy encoded the factorable variables: Genre, Region, Rating and Season
 
-Performed 10 fold cross-validation and let that select lambda and alpha values. 
+10 fold cross-validation 
+From a grid of 400 different parameter combinations
+Each combo used to compute metrics like RMSE, MAE, and R^2
+
+The best RMSE (lowest) was pulled out and revealed the ideal lambda and alpha values. 
+Finally we are able to pass this back to the workflow and come up with the best elastic net model. 
+
+Best Lambda: 0.02636651
+Best Alpha: 0.4736842
+RMSE: 1.575973
+
+Prediction
+RMSE: 1.564085	
+R^2 : 0.5909
+
+Since the RMSE between the best model and the prediction model we can say that the model is stable. If the prediction RMSE was lower we would worry about overfitting.
+
+Computed predictions and then evaluated the RMSE and R^2 of the predictions. 
 
 
 
 
+1.575973/mean(clean_data$gross)
+
+1.564085/mean(clean_data$gross)
+
+The average prediction error RMSE is abt. 10% of the average gross. AKA the model predicts movie revenue with roughly +/- 10% accuracy.
+
+Shrinkage. Predictors. Positive coefficients means that
+an increase in the predictor is associated with a higher gross revenue. Negative coefficient means increase in predictor associated w lower gross revenue.
+
+Total predictors:
+53
+Shrunk to 39 predictors
 
 - Strongest predictors:
+** Votes (0.966)
+** comp_freq (0.444)
+** rating_Unknown (-0.441)
 
 - Moderate Predictors:
+** Director_popularity (0.225)
+** Runtime (0.179)
+** Budget (0.113)
+
 
 - Predictors that shrunk to 0:
+** sentiment
+** Oceania
+** genre: Musical
 
 
 - Model Stats:
 R^2 = 
 RMSE = 
 MAE = 
+
+
+
+
+## Slide that compares the models:
+
+
+
