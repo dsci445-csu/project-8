@@ -72,4 +72,28 @@ top10_table %>%
 
 ##
 
+```{r}
+preds_log <- fitted(lm_full)
+preds_dollars <- exp(preds_log) - 1
+
+obs_log <- lm_full$model$gross
+obs_dollars <- exp(obs_log) - 1
+
+plot_df <- data.frame(
+  Actual = obs_dollars,
+  Predicted = preds_dollars
+)
+
+ggplot(plot_df, aes(x = Actual, y = Predicted)) +
+  geom_point(alpha = 0.3) +
+  geom_abline(intercept = 0, slope = 1, color = "red", size = 1) +
+  scale_x_continuous(labels = scales::dollar) +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(
+    title = "Predicted vs Actual Gross Revenue",
+    x = "Actual Gross (USD)",
+    y = "Predicted Gross (USD)"
+  ) +
+  theme_minimal()
+```
 
