@@ -6,10 +6,9 @@ output: pdf_document
 
 ```{r seed}
 set.seed(445)
-33
 ```
 
-```{r libraries}
+```{r libraries, message = FALSE}
 library(broom)
 library(tidyverse)
 library(dplyr)
@@ -104,6 +103,8 @@ tuned_results <- tune_grid(net_workflow,
                            grid = grid_net,
                            control = control_grid(save_pred = TRUE))
 
+## So we know what is being selected
+select_best(tuned_results, metric = "rmse")
 
 ## finding best lambda and alpha
 best_parameters <- tuned_results |>
@@ -115,6 +116,7 @@ final_net <- finalize_workflow(net_workflow, best_parameters)
 
 ## resultt
 final_fit <- fit(final_net, data = clean_data)
+
 ```
 
 ## Elastic Net Good:
@@ -135,6 +137,7 @@ head(preds)
 rmse(preds, truth = gross, estimate = .pred)
 rsq(preds, truth = gross, estimate = .pred)
 
+
 ## 9.94%, meaning predictions are off by about 10%
 1.56/(mean(clean_data$gross))
 
@@ -146,12 +149,13 @@ rsq(preds, truth = gross, estimate = .pred)
 ## The actual fitted glmnet model that contains all the coefficients, ignores the workflow stuff
 glm_fit <- extract_fit_parsnip(final_fit)$fit
 
-## best lambda
+## best lambda again
 lambda_used <- best_parameters$penalty
+
 
 ## coefficients of the fitted model w the best lambda
 coefs <- coef(glm_fit, s = lambda_used)
-
+coefs
 ## matrix of the predictors and their coefficients
 coef_dense <- as.matrix(coefs)
 
