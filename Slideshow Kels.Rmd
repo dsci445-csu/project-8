@@ -370,22 +370,8 @@ coef_clean <- coef(cv_lasso, s = "lambda.min") %>%
 
     coefficient = round(coefficient, 2),
     abs_coef = round(abs(coefficient), 2),
-
-    interpretation = case_when(
-      variable == "(Intercept)" ~
-        "Baseline predicted gross at all reference categories.",
-      
-      variable == "budget_missing" ~
-        "Difference in gross when the budget was missing.",
-      
-      variable %in% c("star","genre","rating") ~
-        paste0("Effect of category '", level, 
-               "' relative to the reference ", variable, "."),
-
-      TRUE ~ paste0("Effect of a 1-unit increase in ", variable, ".")
-    )
   ) %>%
-  select(variable, level, coefficient, abs_coef, interpretation) %>%
+  select(variable, level, coefficient, abs_coef) %>%
   arrange(desc(abs_coef))
 
 head(coef_clean)
@@ -395,7 +381,6 @@ head(coef_clean)
 ## LASSO
 
 *Results*
-
 ```{r, echo=FALSE}
 pred <- predict(cv_lasso, newx=X, s="lambda.min")
 rmse <- sqrt(mean((y-pred)^2))
@@ -407,7 +392,7 @@ cat("LASSO rmse: $",rmse)
 - This lasso model identified leading actors was the most influential predictor
 - RMSE = 38.5 million dollars, meaning that on average, this lasso model's predictions for movie revenue is off by about 38.5 million dollars
 
-## Tree bBsed Models
+## Tree Based Models
 
 ```{r, include=F}
 rf <- readRDS("final_rf_results.rds")
@@ -436,8 +421,6 @@ r2_binary <- collect_metrics(binnedrf) %>%
   pull(.estimate) %>% 
   round(3)
 ```
-
-## Tree Based Models
 
 ```{r compare-plot, echo=FALSE, fig.width=9, fig.height=4.5, out.width="100%"}
 plot_labels <- tibble(
