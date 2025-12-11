@@ -32,7 +32,7 @@ Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, 
       - Linear Regression  
       - LASSO  
       - Elastic Net  
-      - Bagged & Boosted Trees  
+      - Tree Models 
 **Focus: Which predictors influence revenue the most, and which model performs best?**
 
 ## Data Cleaning
@@ -48,14 +48,26 @@ Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, 
   - Added Punctuation
   
 **Budget**
+
   - Almost 1/3 missing or 0
   - Flagged and Filled
+  
+## Data Clenaing (cont.)
+
+**Director & Company**
+  - Calculated frequency
+
+**Country**
+  - Assigned to regions
+  
+**Genre, Rating, & Stars**
+  - Also quantified with frequency in dataset
 
 ## Pure Linear Regression
 
 - Used cleaned predictors from compiled csv
 - Fit on log(gross) scale for stability
-- Predictions were coverted back to the dollar scale
+- Predictions were coverted back to the dollar scale for interpretation
 
 ## Model Performance
 
@@ -161,7 +173,7 @@ penalties.
 - Why Elastic Net:
   - Large amount of predictors that aren't meaningful are dropped
   
-  - Handles collinearity well like assuming comp_freq and director popularity
+  - Handles colinearity well like assuming comp_freq and director popularity
   
   - Able to rank predictors
   - Stabilize coefficients of correlated predictors
