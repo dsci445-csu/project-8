@@ -20,6 +20,73 @@ clean_data <- read_csv("clean_movie_data.csv")
 source("linreg.R")
 ```
 
+
+## Introduction
+
+Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, and more  
+- Goal: Build models that **predict a movie’s gross revenue**  
+- Approach:
+  - Each group member cleaned specific variables  
+  - Combined into one final dataset  
+  - Applied multiple modeling methods:
+      - Linear Regression  
+      - LASSO  
+      - Elastic Net  
+      - Bagged & Boosted Trees  
+**Focus: Which predictors influence revenue the most, and which model performs best?**
+
+## Data Cleaning
+
+**Date**
+
+  - Extracted month from "date" column 
+  - Used this to assign each entry a season (Fall, Winter, Spring, Summer)
+  
+**Movie Title**
+
+  - Sentiment analysis using AFINN
+  - Added Punctuation
+
+## Pure Linear Regression
+
+- Used cleaned predictors from compiled csv
+- Fit on log(gross) scale for stability
+- Predictions were coverted back on dollars scale
+
+## Model Performance
+
+**$R^2$ = 0.594**
+
+**RMSE = $42.3 million**
+
+**MAE = 19043383**
+
+## 
+
+```{r}
+  
+top10_table %>%
+  kable(format = "html", caption = "Most Significant Predictors") %>%
+  kable_styling(full_width = FALSE)
+```
+
+##
+
+```{r}
+
+ggplot(plot_df, aes(x = Actual, y = Predicted)) +
+  geom_point(alpha = 0.3) +
+  geom_abline(intercept = 0, slope = 1, color = "red") +
+  scale_x_continuous(labels = scales::dollar) +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(
+    title = "Predicted vs Actual Gross Revenue",
+    x = "Actual Gross (USD)",
+    y = "Predicted Gross (USD)"
+  ) +
+  theme_minimal()
+```
+
 ```{r robin - code I need for the plots to work, include = FALSE}
 clean_data <- read_csv("clean_movie_data.csv") 
 clean_data <- clean_data |>
@@ -80,88 +147,6 @@ non_z_co <- coef_dense[coef_dense[,1] != 0 &
 coef_df <- data.frame(predictor = rownames(non_z_co),
                       coefficient = non_z_co[,1])
 ```
-
-## Introduction
-
-Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, and more  
-- Goal: Build models that **predict a movie’s gross revenue**  
-- Approach:
-  - Each group member cleaned specific variables  
-  - Combined into one final dataset  
-  - Applied multiple modeling methods:
-      - Linear Regression  
-      - LASSO  
-      - Elastic Net  
-      - Bagged & Boosted Trees  
-**Focus: Which predictors influence revenue the most, and which model performs best?**
-
-## Data Cleaning
-
-**Date**
-
-  - Extracted month from "date" column 
-  - Used this to assign each entry a season (Fall, Winter, Spring, Summer)
-  
-**Movie Title**
-
-  - Sentiment analysis using AFINN
-  - Added Punctuation
-
-## Pure Linear Regression
-
-- Used cleaned predictors from compiled csv
-- Fit on log(gross) scale for stability
-- Predictions were coverted back on dollars scale
-
-## Model Performance
-
-**$R^2$ = 0.594**
-
-**RMSE = $42.3 million**
-
-**MAE = 19043383**
-
-## 
-
-```{r}
-significant_table <- tidy(lm_full) %>%
-  filter(p.value < 0.05) %>%
-  mutate(
-    pct_impact = round((exp(estimate) - 1) * 100, 2),
-    p.value = signif(p.value, 3)
-  ) %>%
-  arrange(desc(abs(pct_impact))) %>%
-    select(
-    Predictor = term,
-    `Percent Impact on Gross` = pct_impact,
-    `p-value` = p.value) 
-
-top10_table <- significant_table %>%
-  slice(1:10)
-  
-top10_table %>%
-  kable(format = "html", caption = "Most Significant Predictors") %>%
-  kable_styling(full_width = FALSE)
-```
-
-##
-
-```{r}
-
-ggplot(plot_df, aes(x = Actual, y = Predicted)) +
-  geom_point(alpha = 0.3) +
-  geom_abline(intercept = 0, slope = 1, color = "red") +
-  scale_x_continuous(labels = scales::dollar) +
-  scale_y_continuous(labels = scales::dollar) +
-  labs(
-    title = "Predicted vs Actual Gross Revenue",
-    x = "Actual Gross (USD)",
-    y = "Predicted Gross (USD)"
-  ) +
-  theme_minimal()
-```
-
-
 
 ## Method & Motivation: 
 **Elastic Net** 
@@ -400,6 +385,7 @@ pred <- predict(cv_lasso, newx=X, s="lambda.min")
 rmse <- sqrt(mean((y-pred)^2))
 cat("LASSO rmse: $",rmse)
 ```
+
 *Results*
 
 - The baseline/intercept we are given is a gross of ~554 million dollars. 
@@ -407,7 +393,17 @@ cat("LASSO rmse: $",rmse)
 - This lasso model identified leading actors was the most influential predictor
 - RMSE = 38.5 million dollars, meaning that on average, this lasso model's predictions for movie revenue is off by about 38.5 million dollars
 
+## Conclusion
 
-
+- Across all models, the strongest and most consistent predictors were:  
+  **votes, company frequency, director + star popularity, runtime, and rating categories**
+- **Linear Regression:** clear interpretability  
+  **R² ≈ 0.59 · RMSE ≈ \$42M**
+- **Elastic Net:** stable model, removes noise predictors  
+  ~**10% average prediction error**
+- **LASSO:** emphasized star power as a major driver  
+  **RMSE ≈ \$38.5M**
+- **Tree Models:** 
+- **Overall:** Models agree—**movie popularity + industry influence** (stars, directors, production reputation) are key to predicting revenue.
 
 
