@@ -1,5 +1,5 @@
 ---
-title: "Slideshow-Kelsey"
+title: "Predicting Movie Gross Revenue"
 subtitle: "DSCI 445"
 author: "Group 8: Kelsey Britton, James Chinnery, Robin Thrush, Kaitlynn Walston"
 output: 
@@ -83,6 +83,17 @@ coef_df <- data.frame(predictor = rownames(non_z_co),
 
 ## Introduction
 
+Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, and more  
+- Goal: Build models that **predict a movie’s gross revenue**  
+- Approach:
+  - Each group member cleaned specific variables  
+  - Combined into one final dataset  
+  - Applied multiple modeling methods:
+      - Linear Regression  
+      - LASSO  
+      - Elastic Net  
+      - Bagged & Boosted Trees  
+**Focus: Which predictors influence revenue the most, and which model performs best?**
 
 
 
