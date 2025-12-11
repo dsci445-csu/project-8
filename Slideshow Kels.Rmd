@@ -46,6 +46,10 @@ Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, 
 
   - Sentiment analysis using AFINN
   - Added Punctuation
+  
+**Budget**
+  - Almost 1/3 missing or 0
+  - Flagged and Filled
 
 ## Pure Linear Regression
 
@@ -397,6 +401,160 @@ cat("LASSO rmse: $",rmse)
 - This lasso model identified leading actors was the most influential predictor
 - RMSE = 38.5 million dollars, meaning that on average, this lasso model's predictions for movie revenue is off by about 38.5 million dollars
 
+```{r, include=F}
+rf <- readRDS("final_rf_results.rds")
+rf_plot_data <- collect_predictions(rf) %>%
+  mutate(
+    pred_dollars = exp(.pred),
+    truth_dollars = exp(gross)
+  )
+binnedrf <- readRDS("binned_rf_results.rds")
+binned_plot_data <- collect_predictions(binnedrf) %>%
+  mutate(
+    pred_dollars = exp(.pred),
+    truth_dollars = exp(gross)
+  )
+combined_plot_data <- bind_rows(
+  rf_plot_data %>% mutate(Model = "Target Encoding"),
+  binned_plot_data %>% mutate(Model = "Binary Threshold Encoding")
+)
+r2_target <- collect_metrics(rf) %>% 
+  filter(.metric == "rsq") %>% 
+  pull(.estimate) %>% 
+  round(3)
+
+r2_binary <- collect_metrics(binnedrf) %>% 
+  filter(.metric == "rsq") %>% 
+  pull(.estimate) %>% 
+  round(3)
+```
+
+## Tree Based Models
+
+```{r compare-plot, echo=FALSE, fig.width=9, fig.height=4.5, out.width="100%"}
+plot_labels <- tibble(
+  Model = c("Target Encoding", "Binary Threshold Encoding"),  
+  label = c(paste0("R2: ", r2_target), paste0("R2: ", r2_binary)),               
+  x     = c(1e8, 1e8),                             
+  y     = c(1e4, 1e4)                              
+)
+
+ggplot(combined_plot_data, aes(x = truth_dollars, y = pred_dollars)) +
+  
+  geom_point(alpha = 0.3, size = 1.5, color = "#2c3e50") +
+  
+  geom_abline(lty = 2, color = "#e74c3c", linewidth = 1) +
+  
+  facet_wrap(~Model) + 
+  
+  geom_text(
+    data = plot_labels,             
+    aes(x = x, y = y, label = label), 
+    inherit.aes = FALSE,           
+    size = 5
+  ) +
+  
+  scale_x_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  scale_y_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  
+  # Labels
+  labs(
+    x = "Actual Revenue",
+    y = "Predicted Revenue",
+    title = "Predicted vs Actual Gross Revenue with Random Forest",
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(panel.spacing = unit(2, "lines")) # Add space between plots
+```
+
+## Random Forest Performance {.columns-2}
+<br>
+
+```{r calc-metrics, echo=FALSE, fig.width=6, out.width="100%"}
+mape_val <- binned_plot_data %>%
+  summarise(
+    # Formula: Median( Abs( (Actual - Pred) / Actual ) )
+    score = median( abs((truth_dollars - pred_dollars) / truth_dollars) )
+  ) %>%
+  pull(score)
+
+perf_metrics <- tibble(
+  Metric = c("R-Squared", "RMSE (Dollars)", "MAE (Dollars)", "MdAPE (Avg % Error)"),
+  Value = c(
+    r2_binary, 
+    scales::dollar(rmse(binned_plot_data, truth = truth_dollars, estimate = pred_dollars)$.estimate),
+    scales::dollar(mae(binned_plot_data, truth = truth_dollars, estimate = pred_dollars)$.estimate),
+    scales::percent(mape_val, accuracy = 1) # <--- New Line
+  )
+)
+
+
+# 2. Calculate RMSE vs Gross Revenue (Plot)
+# We split movies into 10 "Revenue Tiers" (Deciles) to see how error changes
+rmse_by_gross <- binned_plot_data %>%
+  mutate(gross_bin = ntile(truth_dollars, 10)) %>%
+  group_by(gross_bin) %>%
+  summarise(
+    avg_gross = mean(truth_dollars),
+    bin_rmse  = rmse_vec(truth = truth_dollars, estimate = pred_dollars)
+  )
+
+perf_metrics %>%
+  kbl() %>%
+  kable_styling(font_size = 20, bootstrap_options = "striped")
+```
+<br>
+
+* Poor model relative to the median gross revenue ~14m
+
+* Has some utility predicting high vs low performers
+
+
+
+```{r plots, echo=FALSE, out.width="100%", fig.height= 8}
+
+ggplot(rmse_by_gross, aes(x = avg_gross, y = bin_rmse)) +
+  geom_line(color = "#2c3e50", linewidth = 1) +
+  geom_point(color = "#e74c3c", size = 3) +
+  
+  scale_x_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  scale_y_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  
+  labs(
+    title = "RMSE vs. Revenue",
+    x = "Avg Gross Revenue",
+    y = "RMSE (Error)"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+## Data Limitations 
+
+
+```{r resid-plot, echo=FALSE, fig.width=10, fig.height=4.5, out.width="100%"}
+# 1. Calculate Residuals
+resid_data <- binned_plot_data %>%
+  mutate(residual = truth_dollars - pred_dollars)
+
+# 2. Plot
+ggplot(resid_data, aes(x = pred_dollars, y = residual)) +
+
+  geom_hline(yintercept = 0, color = "#e74c3c", linewidth = 1.5, linetype = "dashed") +
+  
+  geom_point(alpha = 0.4, size = 2.5, color = "#2c3e50") +
+  
+  scale_x_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  scale_y_continuous(labels = label_dollar(scale_cut = cut_short_scale())) +
+  
+  labs(
+    title = "Residuals vs. Fitted Values",
+    x = "Predicted Revenue (Fitted)",
+    y = "Residual Error (Actual - Predicted)"
+  ) +
+  theme_minimal(base_size = 18)
+
+```
+
 ## Conclusion
 
 - Across all models, the strongest and most consistent predictors were:  
@@ -408,6 +566,8 @@ cat("LASSO rmse: $",rmse)
 - **LASSO:** emphasized star power as a major driver  
   **RMSE ≈ \$38.5M**
 - **Tree Models:** 
+  Relatively expensive to run for marginal gains. Struggles with small sample size
+  **RMSE 38.9M R² ≈ 0.59**
 - **Overall:** Models agree—**movie popularity + industry influence** (stars, directors, production reputation) are key to predicting revenue.
 
 
