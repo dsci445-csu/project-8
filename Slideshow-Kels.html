@@ -4175,7 +4175,7 @@ ul.task-list{list-style: none;}
 
 <slide class=""><hgroup><h2>Introduction</h2></hgroup><article  id="introduction">
 
-<p>Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, and more<br/>- Goal: Build models that <strong>predict a movie’s gross revenue</strong><br/>- Approach: - Each group member cleaned specific variables<br/>- Combined into one final dataset<br/>- Applied multiple modeling methods: - Linear Regression<br/>- LASSO<br/>- Elastic Net<br/>- Bagged &amp; Boosted Trees<br/><strong>Focus: Which predictors influence revenue the most, and which model performs best?</strong></p>
+<p>Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, and more<br/>- Goal: Build models that <strong>predict a movie’s gross revenue</strong><br/>- Approach: - Each group member cleaned specific variables<br/>- Combined into one final dataset<br/>- Applied multiple modeling methods: - Linear Regression<br/>- LASSO<br/>- Elastic Net<br/>- Tree Models <strong>Focus: Which predictors influence revenue the most, and which model performs best?</strong></p>
 
 </article></slide><slide class=""><hgroup><h2>Data Cleaning</h2></hgroup><article  id="data-cleaning">
 
@@ -4193,14 +4193,27 @@ ul.task-list{list-style: none;}
 <li>Added Punctuation</li>
 </ul>
 
-<p><strong>Budget</strong> - Almost 1/3 missing or 0 - Flagged and Filled</p>
+<p><strong>Budget</strong></p>
+
+<ul>
+<li>Almost 1/3 missing or 0</li>
+<li>Flagged and Filled</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Data Clenaing (cont.)</h2></hgroup><article  id="data-clenaing-cont.">
+
+<p><strong>Director &amp; Company</strong> - Calculated frequency</p>
+
+<p><strong>Country</strong> - Assigned to regions</p>
+
+<p><strong>Genre, Rating, &amp; Stars</strong> - Also quantified with frequency in dataset</p>
 
 </article></slide><slide class=""><hgroup><h2>Pure Linear Regression</h2></hgroup><article  id="pure-linear-regression">
 
 <ul>
 <li>Used cleaned predictors from compiled csv</li>
 <li>Fit on log(gross) scale for stability</li>
-<li>Predictions were coverted back to the dollar scale</li>
+<li>Predictions were converted back to the dollar scale for interpretation</li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2>Model Performance</h2></hgroup><article  id="model-performance">
@@ -4479,7 +4492,7 @@ votes
 
 <p>RMSE: 1.575973</p>
 
-<p>R^2: 0.584</p>
+<p>\(R^2\): 0.584</p>
 
 <p>MAE: 1.13</p>
 
@@ -4534,17 +4547,6 @@ votes
 
 </article></slide><slide class=""><hgroup><h2>LASSO Model:</h2></hgroup><article  id="lasso-model">
 
-<pre >## Loading required package: Matrix</pre>
-
-<pre >## 
-## Attaching package: &#39;Matrix&#39;</pre>
-
-<pre >## The following objects are masked from &#39;package:tidyr&#39;:
-## 
-##     expand, pack, unpack</pre>
-
-<pre >## Loaded glmnet 4.1-10</pre>
-
 <pre >##         variable             level coefficient  abs_coef
 ## 1    (Intercept)              &lt;NA&gt;   542771897 542771897
 ## 2           star         Tom Hanks    28229752  28229752
@@ -4553,9 +4555,7 @@ votes
 ## 5           star Leonardo DiCaprio    19510870  19510870
 ## 6 budget_missing              &lt;NA&gt;   -17378927  17378927</pre>
 
-</article></slide><slide class=""><hgroup><h2>LASSO</h2></hgroup><article  id="lasso">
-
-<p><em>Results</em></p>
+</article></slide><slide class=""><hgroup><h2>Results</h2></hgroup><article  id="results">
 
 <pre >## LASSO rmse: $ 38555092</pre>
 
