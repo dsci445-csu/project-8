@@ -236,16 +236,13 @@ returns a model with only variables that add predictive power
 ```{r}
 ## The baseline/intercept we are given is a gross of ~$554 million. The coefficients we see are based on the income compared to the baseline. Thus, Tom Hanks would be predicted to earn about $28.4 more than the assumed baseline, but Nicole Kidman would be predicted to make about $27.2 million less than rhe baseline.
 
-
 ## This lasso model identified leading actors as some of the most powerful predictors (associations)
-
-
 
 ## RMSE = 38.5 million dollars
 ## on average, this lasso model's predictions for movie revenue is off by about $38.5 million
 
 
-
+# Paper Notes:
 
 ## the regularized regression model identified several actor-related predictors as to be having the largest effects on revenue. The model's intercept was approximately $554 million. This represents the baseline predicted revenue for a movie when all of the dummy predictors are at their reference levels. We can see different actors that have impacts on the model and we can see how much they earn based on the baseline. We can see actors such as Tom Hanks and Sandra Bullock earning about $28.45 and $23 million over the baseline repectively. We can also see actors like Johnny Depp and Nicole Kidman who are predicted to earn about $16.4 and $27.2 million less than the baseline. The budget_missing indicator also had a notable effect, since it predicted that films without reported budgets tend to earn substaintially less than those with reported budgets.
 

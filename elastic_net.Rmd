@@ -8,7 +8,7 @@ output: pdf_document
 set.seed(445)
 ```
 
-```{r libraries}
+```{r libraries, message = FALSE}
 library(broom)
 library(tidyverse)
 library(dplyr)
@@ -98,10 +98,16 @@ grid_net <- grid_regular(penalty(),
 ## penalty (lambda) controls shrinkage
 ## mixture (alpha) controls type of shrinkage 
 ##   alpha = 1 is lasso alpha = 0 is ridge and anything in between is elastic net :D
+
+the_metrics <- metric_set(rmse, rsq, mae)
 tuned_results <- tune_grid(net_workflow,
                            resamples = folds,
                            grid = grid_net,
-                           control = control_grid(save_pred = TRUE))
+                           control = control_grid(save_pred = TRUE),
+                           metrics = the_metrics)
+
+## So we know what is being selected
+select_best(tuned_results, metric = "rmse")
 
 
 ## finding best lambda and alpha
@@ -109,11 +115,25 @@ best_parameters <- tuned_results |>
   select_best(metric = "rmse")
 best_parameters
 
+cv_mets <- collect_metrics(tuned_results)
+mae_CV <- cv_mets |>
+  filter(.metric == "mae",
+         near(penalty, best_parameters$penalty),
+         near(mixture, best_parameters$mixture))
+mae_CV
+
+r_sq <- cv_mets |>
+  filter(.metric == "rsq",
+         near(penalty, best_parameters$penalty),
+         near(mixture, best_parameters$mixture))
+r_sq
+
 ## only using the best parameters found
 final_net <- finalize_workflow(net_workflow, best_parameters)
 
 ## resultt
 final_fit <- fit(final_net, data = clean_data)
+
 ```
 
 ## Elastic Net Good:
@@ -130,9 +150,12 @@ preds <- predict(final_fit, clean_data) |>
 
 head(preds)
 
+mae(preds, truth = gross, estimate = .pred)
+
 ## want rmse and rsq, indicative of quality of prediction model
 rmse(preds, truth = gross, estimate = .pred)
 rsq(preds, truth = gross, estimate = .pred)
+
 
 ## 9.94%, meaning predictions are off by about 10%
 1.56/(mean(clean_data$gross))
@@ -145,12 +168,13 @@ rsq(preds, truth = gross, estimate = .pred)
 ## The actual fitted glmnet model that contains all the coefficients, ignores the workflow stuff
 glm_fit <- extract_fit_parsnip(final_fit)$fit
 
-## best lambda
+## best lambda again
 lambda_used <- best_parameters$penalty
+
 
 ## coefficients of the fitted model w the best lambda
 coefs <- coef(glm_fit, s = lambda_used)
-
+coefs
 ## matrix of the predictors and their coefficients
 coef_dense <- as.matrix(coefs)
 
@@ -163,6 +187,11 @@ coef_df <- data.frame(predictor = rownames(non_z_co),
 
 coef_df
 ```
+
+Shrinkage. Predictors. Positive coefficients means that
+an increase in the predictor is associated with a higher gross revenue. Negative coefficient means increase in predictor associated w lower gross revenue.
+
+
 
 
 ```{r residuals v fitted}
@@ -195,7 +224,41 @@ qqline(net_resid, col = "darkred")
 
 
 
+```{r actual v predicted}
+
+act_pred <- ggplot(data = preds, mapping = aes(x = gross, y = .pred)) +
+  geom_point(alpha = 0.2) +
+  geom_abline(intercept = 0, slope = 1, color = "darkred") + 
+  labs(title = "Actual VS Predicted Gross",
+       x = "Actual Log Gross",
+       y = "Predicted Log Gross") 
+act_pred
+
+```
 
 
 
+
+
+```{r barplot predictors magnitude}
+
+coef_df <- coef_df |>
+  mutate(abs_coef = abs(coefficient)) |>
+  arrange(desc(abs_coef))
+
+top_coef <- coef_df |>
+  filter(rank(-abs_coef) <= 15)
+
+bar_pred <- ggplot(data = top_coef, aes(x = reorder(predictor, abs_coef), y = abs_coef, fill = coefficient > 0)) + 
+  geom_col() + 
+  coord_flip() + 
+  scale_fill_manual(values = c("darkred", "darkgreen"), labels = c("Negative", "Positive")) +
+  labs(title = "Predictor Importance",
+       x = "Predictor",
+       y = "Coefficient Magnitude",
+       fill = "Coefficient Sign")
+
+
+bar_pred
+```
 
