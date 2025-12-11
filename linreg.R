@@ -4,8 +4,6 @@ library(tidyverse)
 
 library(tidymodels)
 
-
-
 clean_data <- read_csv("clean_movie_data.csv") 
 
 clean_data_lm <- clean_data |>
@@ -70,7 +68,20 @@ plot_df <- data.frame(
   Predicted = preds_dollars
 )
 
+significant_table <- tidy(lm_full) %>%
+  filter(p.value < 0.05) %>%
+  mutate(
+    pct_impact = round((exp(estimate) - 1) * 100, 2),
+    p.value = signif(p.value, 3)
+  ) %>%
+  arrange(desc(abs(pct_impact))) %>%
+  select(
+    Predictor = term,
+    `Percent Impact on Gross` = pct_impact,
+    `p-value` = p.value) 
 
+top10_table <- significant_table %>%
+  slice(1:8)
 
 
 
