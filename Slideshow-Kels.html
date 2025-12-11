@@ -4200,7 +4200,7 @@ ul.task-list{list-style: none;}
 <ul>
 <li>Used cleaned predictors from compiled csv</li>
 <li>Fit on log(gross) scale for stability</li>
-<li>Predictions were coverted back on dollars scale</li>
+<li>Predictions were coverted back to the dollar scale</li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2>Model Performance</h2></hgroup><article  id="model-performance">
@@ -4688,7 +4688,7 @@ MdAPE (Avg % Error)
 <ul>
 <li>Across all models, the strongest and most consistent predictors were:<br/><strong>votes, company frequency, director + star popularity, runtime, and rating categories</strong></li>
 <li><strong>Linear Regression:</strong> clear interpretability<br/><strong>R² ≈ 0.59 · RMSE ≈ $42M</strong></li>
-<li><strong>Elastic Net:</strong> stable model, removes noise predictors<br/>~<strong>10% average prediction error</strong></li>
+<li><strong>Elastic Net:</strong> stable model, removes noise predictors<br/></li>
 <li><strong>LASSO:</strong> emphasized star power as a major driver<br/><strong>RMSE ≈ $38.5M</strong></li>
 <li><strong>Tree Models:</strong> Relatively expensive to run for marginal gains. Struggles with small sample size <strong>RMSE 38.9M R² ≈ 0.59</strong></li>
 <li><strong>Overall:</strong> Models agree—<strong>movie popularity + industry influence</strong> (stars, directors, production reputation) are key to predicting revenue.</li>
