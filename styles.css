@@ -1,31 +1,41 @@
-slides > slide {
-  background: none;
-  background-color: #d9d6a7;
+:root {
+  --accent: #0b5e29;
+  --bg: #eef7f1;           
+  --text: #222;
 }
 
-.title-slide hgroup h1 {
-  color: #061D95;             
+body, .slide {
+  background-color: var(--bg);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  color: var(--text);
+}
+
+h1, h2, h3 {
+  color: var(--accent);
   font-weight: 700;
 }
 
-.title-slide hgroup h2 {
-  color: #3f587f;           
-}
-slides > slide h2 {
-  color: #061D95;
-  border-bottom: 2px solid #d2d7eb;
-  padding-bottom: 4px;
-}
-slides > slide {
-  color: #222222;
-  font-size: 20px;
+.title-slide {
+  background-color: var(--accent);
+  color: white;
+  text-align: left;
+  padding: 40px;
 }
 
-slides > slide img {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
+.title-slide h1 {
+  color: white;
 }
 
+th {
+  background-color: var(--accent);
+  color: white;
+}
+td {
+  border-bottom: 1px solid #c9e2d1;
+}
 
+/* ----- Figures ----- */
+img {
+  border-radius: 6px;
+}
 
