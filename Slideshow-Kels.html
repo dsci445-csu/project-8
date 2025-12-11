@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Slideshow-Kelsey</title>
+  <title>Predicting Movie Gross Revenue</title>
 
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="chrome=1">
@@ -19,7 +19,7 @@
     var SLIDE_CONFIG = {
       // Slide settings
       settings: {
-                title: 'Slideshow-Kelsey',
+                title: 'Predicting Movie Gross Revenue',
                         subtitle: 'DSCI 445',
                 useBuilds: true,
         usePrettify: true,
@@ -4156,7 +4156,7 @@ div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 </style>
 
-  <style type="text/css">slides > slide {background: none;background-color: #d9d6a7;}.title-slide hgroup h1 {color: #061D95; font-weight: 700;}.title-slide hgroup h2 {color: #3f587f; }slides > slide h2 {color: #061D95;border-bottom: 2px solid #d2d7eb;padding-bottom: 4px;}slides > slide {color: #222222;font-size: 20px;}slides > slide img {display: block;margin-left: auto;margin-right: auto;}</style>
+  <style type="text/css">:root {--accent: #0b5e29;--bg: #eef7f1; --text: #222;}body, .slide {background-color: var(--bg);font-family: "Helvetica Neue", Arial, sans-serif;color: var(--text);}h1, h2, h3 {color: var(--accent);font-weight: 700;}.title-slide {background-color: var(--accent);color: white;text-align: left;padding: 40px;}.title-slide h1 {color: white;}th {background-color: var(--accent);color: white;}td {border-bottom: 1px solid #c9e2d1;}img {border-radius: 6px;}</style>
 
 </head>
 
@@ -4174,6 +4174,8 @@ ul.task-list{list-style: none;}
   </slide>
 
 <slide class=""><hgroup><h2>Introduction</h2></hgroup><article  id="introduction">
+
+<p>Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, and more<br/>- Goal: Build models that <strong>predict a movie’s gross revenue</strong><br/>- Approach: - Each group member cleaned specific variables<br/>- Combined into one final dataset<br/>- Applied multiple modeling methods: - Linear Regression<br/>- LASSO<br/>- Elastic Net<br/>- Bagged &amp; Boosted Trees<br/><strong>Focus: Which predictors influence revenue the most, and which model performs best?</strong></p>
 
 </article></slide><slide class=""><hgroup><h2>Data Cleaning</h2></hgroup><article  id="data-cleaning">
 
@@ -4421,50 +4423,6 @@ votes
 
 </tr>
 
-<tr>
-
-<td style="text-align:left;">
-
-regionEast Asia
-
-</td>
-
-<td style="text-align:right;">
-
--82.93
-
-</td>
-
-<td style="text-align:right;">
-
-5.69e-04
-
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-regionMiddle East
-
-</td>
-
-<td style="text-align:right;">
-
--76.84
-
-</td>
-
-<td style="text-align:right;">
-
-1.73e-02
-
-</td>
-
-</tr>
-
 </tbody>
 
 </table>
@@ -4572,6 +4530,194 @@ regionMiddle East
 <li>Predicts movie gross within ~10% of the actual gross</li>
 <li>High-gross movies are predicted more accurately than low-gross movies</li>
 <li>Demonstrates stability as it performs very similarly between cross-validation and full-data predictions.</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>LASSO Model:</h2></hgroup><article  id="lasso-model">
+
+<pre >## Warning: package &#39;glmnet&#39; was built under R version 4.5.2</pre>
+
+<pre >## Loading required package: Matrix</pre>
+
+<pre >## 
+## Attaching package: &#39;Matrix&#39;</pre>
+
+<pre >## The following objects are masked from &#39;package:tidyr&#39;:
+## 
+##     expand, pack, unpack</pre>
+
+<pre >## Loaded glmnet 4.1-10</pre>
+
+<pre >##               variable                 level  coefficient     abs_coef
+## 1          (Intercept)                  &lt;NA&gt; 542771896.88 542771896.88
+## 2                 star             Tom Hanks  28229751.67  28229751.67
+## 3                 star         Nicole Kidman -26697096.48  26697096.48
+## 4                 star        Sandra Bullock  22786020.19  22786020.19
+## 5                 star     Leonardo DiCaprio  19510869.91  19510869.91
+## 6       budget_missing                  &lt;NA&gt; -17378926.81  17378926.81
+## 7                 star            Will Smith  16495162.30  16495162.30
+## 8                 star           Johnny Depp -15990916.60  15990916.60
+## 9                genre                Horror  15726249.10  15726249.10
+## 10                star         Russell Crowe -15622903.99  15622903.99
+## 11                star    Sylvester Stallone -15231154.76  15231154.76
+## 12                star            Mel Gibson  14643216.20  14643216.20
+## 13                star        Brendan Fraser -14568271.85  14568271.85
+## 14                star             Brad Pitt -14272307.63  14272307.63
+## 15              rating             NOT RATED -13706688.70  13706688.70
+## 16                star            Jim Carrey  13119170.77  13119170.77
+## 17              rating         Not specified -12398272.98  12398272.98
+## 18                star            Matt Damon -11693110.95  11693110.95
+## 19                star          Nicolas Cage -10550029.24  10550029.24
+## 20                star        Robert De Niro -10219376.36  10219376.36
+## 21                star          Jeff Bridges -10120151.13  10120151.13
+## 22                star           Kevin Bacon -10028244.57  10028244.57
+## 23                star          Kurt Russell  -9842577.47   9842577.47
+## 24                star       Anthony Hopkins  -9827909.17   9827909.17
+## 25              rating               UNRATED  -9817837.28   9817837.28
+## 26               score                  &lt;NA&gt;   9168633.17   9168633.17
+## 27                star           Ben Stiller   8776554.70   8776554.70
+## 28               genre             Animation   8570188.82   8570188.82
+## 29              rating                     R  -8370791.10   8370791.10
+## 30                star           John Cusack  -7647018.57   7647018.57
+## 31                star          Will Ferrell   7495037.45   7495037.45
+## 32                star            Tom Cruise   7421633.51   7421633.51
+## 33                star        Pierce Brosnan  -7277818.43   7277818.43
+## 34              rating                 NC-17  -7016297.70   7016297.70
+## 35                star          Bruce Willis  -6440533.22   6440533.22
+## 36              rating                     G   6117157.81   6117157.81
+## 37                star        George Clooney  -5934589.69   5934589.69
+## 38        seasonSummer                  &lt;NA&gt;   5856865.04   5856865.04
+## 39                star Arnold Schwarzenegger  -5805189.90   5805189.90
+## 40                star           Ethan Hawke  -5592705.99   5592705.99
+## 41                star             Al Pacino  -5509195.69   5509195.69
+## 42               genre                 Drama  -5113826.94   5113826.94
+## 43               genre             Biography  -5033054.95   5033054.95
+## 44               genre                 Crime  -4807822.49   4807822.49
+## 45              rating                 TV-14  -4083444.33   4083444.33
+## 46                star         Mark Wahlberg   3636816.15   3636816.15
+## 47              rating                    PG   3125190.96   3125190.96
+## 48                star          Dennis Quaid  -2724648.20   2724648.20
+## 49               genre                Comedy   2652931.66   2652931.66
+## 50               genre             Adventure   2571084.00   2571084.00
+## 51           comp_freq                  &lt;NA&gt;   2542575.23   2542575.23
+## 52                star        Robin Williams   2523452.29   2523452.29
+## 53        seasonSpring                  &lt;NA&gt;   2173491.13   2173491.13
+## 54               genre                Family  -2122997.03   2122997.03
+## 55   writer_popularity                  &lt;NA&gt;   2110435.77   2110435.77
+## 56        seasonWinter                  &lt;NA&gt;   2106833.56   2106833.56
+## 57                star          Steve Martin   2037812.28   2037812.28
+## 58                star         Kevin Costner  -1850431.94   1850431.94
+## 59                star          Keanu Reeves  -1734578.90   1734578.90
+## 60                star         Harrison Ford   1620151.81   1620151.81
+## 61      sentiment_best                  &lt;NA&gt;  -1445693.59   1445693.59
+## 62                star           _popularity   1396162.19   1396162.19
+## 63                star           Liam Neeson   1264104.30   1264104.30
+## 64                star        Michael Keaton   1043964.06   1043964.06
+## 65                star   Matthew McConaughey   -905999.31    905999.31
+## 66                star        Christian Bale    540669.82    540669.82
+## 67 director_popularity                  &lt;NA&gt;    311766.85    311766.85
+## 68                year                  &lt;NA&gt;   -305694.24    305694.24
+## 69        writer_count                  &lt;NA&gt;   -147316.55    147316.55
+## 70      director_count                  &lt;NA&gt;    -88877.51     88877.51
+## 71                star          Meryl Streep    -34053.94     34053.94
+## 72             runtime                  &lt;NA&gt;     25279.79     25279.79
+## 73              rating                 PG-13     18188.45     18188.45
+## 74              budget                  &lt;NA&gt;         0.99         0.99
+##                                                                interpretation
+## 1                       Baseline predicted gross at all reference categories.
+## 2              Effect of category &#39;Tom Hanks&#39; relative to the reference star.
+## 3          Effect of category &#39;Nicole Kidman&#39; relative to the reference star.
+## 4         Effect of category &#39;Sandra Bullock&#39; relative to the reference star.
+## 5      Effect of category &#39;Leonardo DiCaprio&#39; relative to the reference star.
+## 6                            Difference in gross when the budget was missing.
+## 7             Effect of category &#39;Will Smith&#39; relative to the reference star.
+## 8            Effect of category &#39;Johnny Depp&#39; relative to the reference star.
+## 9                Effect of category &#39;Horror&#39; relative to the reference genre.
+## 10         Effect of category &#39;Russell Crowe&#39; relative to the reference star.
+## 11    Effect of category &#39;Sylvester Stallone&#39; relative to the reference star.
+## 12            Effect of category &#39;Mel Gibson&#39; relative to the reference star.
+## 13        Effect of category &#39;Brendan Fraser&#39; relative to the reference star.
+## 14             Effect of category &#39;Brad Pitt&#39; relative to the reference star.
+## 15           Effect of category &#39;NOT RATED&#39; relative to the reference rating.
+## 16            Effect of category &#39;Jim Carrey&#39; relative to the reference star.
+## 17       Effect of category &#39;Not specified&#39; relative to the reference rating.
+## 18            Effect of category &#39;Matt Damon&#39; relative to the reference star.
+## 19          Effect of category &#39;Nicolas Cage&#39; relative to the reference star.
+## 20        Effect of category &#39;Robert De Niro&#39; relative to the reference star.
+## 21          Effect of category &#39;Jeff Bridges&#39; relative to the reference star.
+## 22           Effect of category &#39;Kevin Bacon&#39; relative to the reference star.
+## 23          Effect of category &#39;Kurt Russell&#39; relative to the reference star.
+## 24       Effect of category &#39;Anthony Hopkins&#39; relative to the reference star.
+## 25             Effect of category &#39;UNRATED&#39; relative to the reference rating.
+## 26                                      Effect of a 1-unit increase in score.
+## 27           Effect of category &#39;Ben Stiller&#39; relative to the reference star.
+## 28            Effect of category &#39;Animation&#39; relative to the reference genre.
+## 29                   Effect of category &#39;R&#39; relative to the reference rating.
+## 30           Effect of category &#39;John Cusack&#39; relative to the reference star.
+## 31          Effect of category &#39;Will Ferrell&#39; relative to the reference star.
+## 32            Effect of category &#39;Tom Cruise&#39; relative to the reference star.
+## 33        Effect of category &#39;Pierce Brosnan&#39; relative to the reference star.
+## 34               Effect of category &#39;NC-17&#39; relative to the reference rating.
+## 35          Effect of category &#39;Bruce Willis&#39; relative to the reference star.
+## 36                   Effect of category &#39;G&#39; relative to the reference rating.
+## 37        Effect of category &#39;George Clooney&#39; relative to the reference star.
+## 38                               Effect of a 1-unit increase in seasonSummer.
+## 39 Effect of category &#39;Arnold Schwarzenegger&#39; relative to the reference star.
+## 40           Effect of category &#39;Ethan Hawke&#39; relative to the reference star.
+## 41             Effect of category &#39;Al Pacino&#39; relative to the reference star.
+## 42                Effect of category &#39;Drama&#39; relative to the reference genre.
+## 43            Effect of category &#39;Biography&#39; relative to the reference genre.
+## 44                Effect of category &#39;Crime&#39; relative to the reference genre.
+## 45               Effect of category &#39;TV-14&#39; relative to the reference rating.
+## 46         Effect of category &#39;Mark Wahlberg&#39; relative to the reference star.
+## 47                  Effect of category &#39;PG&#39; relative to the reference rating.
+## 48          Effect of category &#39;Dennis Quaid&#39; relative to the reference star.
+## 49               Effect of category &#39;Comedy&#39; relative to the reference genre.
+## 50            Effect of category &#39;Adventure&#39; relative to the reference genre.
+## 51                                  Effect of a 1-unit increase in comp_freq.
+## 52        Effect of category &#39;Robin Williams&#39; relative to the reference star.
+## 53                               Effect of a 1-unit increase in seasonSpring.
+## 54               Effect of category &#39;Family&#39; relative to the reference genre.
+## 55                          Effect of a 1-unit increase in writer_popularity.
+## 56                               Effect of a 1-unit increase in seasonWinter.
+## 57          Effect of category &#39;Steve Martin&#39; relative to the reference star.
+## 58         Effect of category &#39;Kevin Costner&#39; relative to the reference star.
+## 59          Effect of category &#39;Keanu Reeves&#39; relative to the reference star.
+## 60         Effect of category &#39;Harrison Ford&#39; relative to the reference star.
+## 61                             Effect of a 1-unit increase in sentiment_best.
+## 62           Effect of category &#39;_popularity&#39; relative to the reference star.
+## 63           Effect of category &#39;Liam Neeson&#39; relative to the reference star.
+## 64        Effect of category &#39;Michael Keaton&#39; relative to the reference star.
+## 65   Effect of category &#39;Matthew McConaughey&#39; relative to the reference star.
+## 66        Effect of category &#39;Christian Bale&#39; relative to the reference star.
+## 67                        Effect of a 1-unit increase in director_popularity.
+## 68                                       Effect of a 1-unit increase in year.
+## 69                               Effect of a 1-unit increase in writer_count.
+## 70                             Effect of a 1-unit increase in director_count.
+## 71          Effect of category &#39;Meryl Streep&#39; relative to the reference star.
+## 72                                    Effect of a 1-unit increase in runtime.
+## 73               Effect of category &#39;PG-13&#39; relative to the reference rating.
+## 74                                     Effect of a 1-unit increase in budget.</pre>
+
+<pre >## LASSO rmse: $ 38555092</pre>
+
+<p><em>Results</em></p>
+
+<ul>
+<li>The baseline/intercept we are given is a gross of ~554 million dollars.</li>
+<li>The coefficients we see are based on the income compared to the baseline. For example, Tom Hanks would be predicted to earn about 28.4 million dollars more than the assumed baseline, but Nicole Kidman would be predicted to make about 27.2 million dollars less than the baseline.</li>
+<li>This lasso model identified leading actors was the most influential predictor</li>
+<li>RMSE = 38.5 million dollars, meaning that on average, this lasso model’s predictions for movie revenue is off by about 38.5 million dollars</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Conclusion</h2></hgroup><article  id="conclusion">
+
+<ul>
+<li>Across all models, the strongest and most consistent predictors were:<br/><strong>votes, company frequency, director + star popularity, runtime, and rating categories</strong></li>
+<li><strong>Linear Regression:</strong> clear interpretability<br/><strong>R² ≈ 0.59 · RMSE ≈ $42M</strong></li>
+<li><strong>Elastic Net:</strong> stable model, removes noise predictors<br/>~<strong>10% average prediction error</strong></li>
+<li><strong>LASSO:</strong> emphasized star power as a major driver<br/><strong>RMSE ≈ $38.5M</strong></li>
+<li><strong>Tree Models:</strong></li>
+<li><strong>Overall:</strong> Models agree—<strong>movie popularity + industry influence</strong> (stars, directors, production reputation) are key to predicting revenue.</li>
 </ul></article></slide>
 
 

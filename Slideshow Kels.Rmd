@@ -302,6 +302,10 @@ and full-data predictions.
 ## LASSO Model: 
 
 ```{r lasso}
+library(glmnet)
+library(dplyr)
+library(tidyr)
+library(stringr)
 # data
 ds <- read.csv("clean_movie_data.csv")
 df <- na.omit(ds)
