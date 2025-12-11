@@ -152,8 +152,7 @@ coef_df <- data.frame(predictor = rownames(non_z_co),
                       coefficient = non_z_co[,1])
 ```
 
-## Method & Motivation: 
-**Elastic Net** 
+## Elastic Net
 
 - Reminder:
 Elastic Net is a shrinkage model that combines LASSO and Ridge Regression
