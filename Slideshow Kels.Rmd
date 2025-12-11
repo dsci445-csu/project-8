@@ -160,7 +160,6 @@ Elastic Net is a shrinkage model that combines LASSO and Ridge Regression
 penalties.
 
 - Why Elastic Net:
-
   - Large amount of predictors that aren't meaningful are dropped
   
   - Handles collinearity well like assuming comp_freq and director popularity
