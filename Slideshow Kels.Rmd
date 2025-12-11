@@ -316,3 +316,100 @@ bar_pred
 and full-data predictions. 
 
 
+## LASSO Model: 
+
+```{r lasso}
+# data
+ds <- read.csv("clean_movie_data.csv")
+df <- na.omit(ds)
+
+top_stars <- names(sort(table(df$star), decreasing=TRUE))[1:50]
+df$star <- ifelse(df$star %in% top_stars, df$star, "Other")
+df$star <- as.factor(df$star)
+
+# response var
+y <- df$gross
+
+# predictors 
+predictors <- df %>%
+  select(gross, budget, runtime, year, score, rating, genre, star, 
+         season, budget_missing, direc_freq, director_count, director_popularity,
+         comp_freq, writer_count, writer_popularity, star_count, star_popularity,
+         sentiment_best)
+predictors <- predictors %>% select(-gross)
+
+# model matrix (dummy coding)
+X <- model.matrix(~ ., data=predictors)[, -1]
+
+# cv lasso
+cv_lasso <- cv.glmnet(x=X, y=y, alpha=1, nfolds = 10, standardize = TRUE)
+lamb_min <- cv_lasso$lambda.min
+lamb_1se <- cv_lasso$lambda.1se
+
+# coefs at lasso min
+coef_lasso <- coef(cv_lasso, s="lambda.min")
+coef_lasso <- coef_lasso[coef_lasso != 0]
+
+pred <- predict(cv_lasso, newx=X, s="lambda.min")
+
+coef_clean <- coef(cv_lasso, s = "lambda.min") %>%
+  as.matrix() %>%
+  as.data.frame() %>%
+  rownames_to_column("term") %>%
+  rename(coefficient = 2) %>%
+  filter(coefficient != 0) %>%
+  mutate(
+    variable = case_when(
+      term == "(Intercept)" ~ "(Intercept)",
+      str_starts(term, "star") ~ "star",
+      str_starts(term, "genre") ~ "genre",
+      str_starts(term, "rating") ~ "rating",
+      TRUE ~ term         # numeric variables
+    ),
+
+    # Extract category level (only for factors)
+    level = case_when(
+      variable %in% c("star", "genre", "rating") ~ 
+        str_remove(term, paste0(variable)),
+      TRUE ~ NA_character_
+    ),
+    level = str_trim(level),
+
+    coefficient = round(coefficient, 2),
+    abs_coef = round(abs(coefficient), 2),
+
+    interpretation = case_when(
+      variable == "(Intercept)" ~
+        "Baseline predicted gross at all reference categories.",
+      
+      variable == "budget_missing" ~
+        "Difference in gross when the budget was missing.",
+      
+      variable %in% c("star","genre","rating") ~
+        paste0("Effect of category '", level, 
+               "' relative to the reference ", variable, "."),
+
+      TRUE ~ paste0("Effect of a 1-unit increase in ", variable, ".")
+    )
+  ) %>%
+  select(variable, level, coefficient, abs_coef, interpretation) %>%
+  arrange(desc(abs_coef))
+
+coef_clean
+
+# rmse
+pred <- predict(cv_lasso, newx=X, s="lambda.min")
+rmse <- sqrt(mean((y-pred)^2))
+cat("LASSO rmse: $",rmse)
+```
+*Results*
+
+- The baseline/intercept we are given is a gross of ~554 million dollars. 
+- The coefficients we see are based on the income compared to the baseline. For example, Tom Hanks would be predicted to earn about 28.4 million dollars more than the assumed baseline, but Nicole Kidman would be predicted to make about 27.2 million dollars less than the baseline.
+- This lasso model identified leading actors was the most influential predictor
+- RMSE = 38.5 million dollars, meaning that on average, this lasso model's predictions for movie revenue is off by about 38.5 million dollars
+
+
+
+
+
