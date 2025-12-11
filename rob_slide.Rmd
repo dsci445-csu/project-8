@@ -66,7 +66,8 @@ lambda_used <- best_parameters$penalty
 
 coefs <- coef(glm_fit, s = lambda_used)
 coef_dense <- as.matrix(coefs)
-non_z_co <- coef_dense[coef_dense[,1] != 0 & rownames(coef_dense) != "(Intercept)", , drop = FALSE]
+non_z_co <- coef_dense[coef_dense[,1] != 0 & 
+                         rownames(coef_dense) != "(Intercept)", , drop = FALSE]
 coef_df <- data.frame(predictor = rownames(non_z_co),
                       coefficient = non_z_co[,1])
 ```
@@ -79,14 +80,20 @@ coef_df <- data.frame(predictor = rownames(non_z_co),
 Elastic Net is a shrinkage model that combines LASSO and Ridge Regression
 penalties.
 
-- Why it would profit to use this method: 
-Good to use if predictors are highly correlated, avoids overfitting and manages 
-model complexity.
+- Why Elastic Net:
+Large amount of predictors that aren't meaningful are dropped
+Handles collinearity well like assuming comp_freq and director popularity
+Able to rank predictors
+Stabilize coefficients of correlated predictors
+
+Since main goal was to identify strongest predictors, we did not remove 
+possible correlated terms and did not create interaction terms. 
+
 
 ## Handling Data: 
 
 - How: 
-** Log transformed gross (response variable)
+** Log transformed gross (response variable) 
 ** Log +1 transformed all numeric predictors 
 ** Dummy encoded the categorical variables: Genre, Region, Rating and Season
 
@@ -94,11 +101,11 @@ model complexity.
 
 ## Hyperparameter Tuning:
 
-Grid of 400 different parameter combinations
-Each combo used to compute metrics like RMSE, MAE, and R^2
+Grid of 400 different combos of alpha and lambda
+Each combo used to compute metrics for RMSE, MAE, and R^2
 
-The best RMSE (lowest) was pulled out and revealed the ideal lambda and alpha 
-values. 
+The best RMSE (lowest CV RMSE) was pulled out and revealed the ideal lambda and 
+alpha values. 
 
 Finally we are able to pass this back to the workflow and come up with the best 
 elastic net model. 
@@ -115,7 +122,7 @@ exp(1.13)
 ```
 
 ## Prediction Model: 
-Prediction
+**Prediction:**
 RMSE: 1.564085	
 R^2 : 0.5909
 MAE: 1.120881
@@ -153,21 +160,21 @@ Total predictors: 53
 
 Leftover: 39 and Shrunk to Zero: 14
 
-- Strongest predictors:
-** Votes (0.966)
-** comp_freq (0.444)
-** rating_Unknown (-0.441)
+### Strongest predictors:
+- Votes (0.966)
+- comp_freq (0.444)
+- rating_Unknown (-0.441)
 
-- Moderate Predictors:
-** Director_popularity (0.225)
-** Runtime (0.179)
-** Budget (0.113)
+### Moderate Predictors:
+- Director_popularity (0.225)
+- Runtime (0.179)
+- Budget (0.113)
 
 
-- Predictors that shrunk to 0:
-** sentiment
-** Oceania
-** genre: Musical
+### Predictors that shrunk to 0:
+- sentiment
+- Oceania
+- genre: Musical
 
 ```{r predictor barplot}
 
@@ -178,10 +185,12 @@ coef_df <- coef_df |>
 top_coef <- coef_df |>
   filter(rank(-abs_coef) <= 15)
 
-bar_pred <- ggplot(data = top_coef, aes(x = reorder(predictor, abs_coef), y = abs_coef, fill = coefficient > 0)) + 
+bar_pred <- ggplot(data = top_coef, aes(x = reorder(predictor, abs_coef), 
+                                        y = abs_coef, fill = coefficient > 0)) + 
   geom_col() + 
   coord_flip() + 
-  scale_fill_manual(values = c("darkred", "darkgreen"), labels = c("Negative", "Positive")) +
+  scale_fill_manual(values = c("darkred", "darkgreen"), 
+                    labels = c("Negative", "Positive")) +
   labs(title = "Predictor Importance",
        x = "Predictor",
        y = "Coefficient Magnitude",
@@ -192,10 +201,11 @@ bar_pred
 
 ## Overall Takeaway:
 
-** Identified important predictors
-** Predicts movie gross within ~10% of the actual gross
-** High-gross movies are predicted more accurately than low-gross movies
-** Demonstrates stability as it performs very similarly between cross-validation and full-data predictions. 
+- Identified important predictors
+- Predicts movie gross within ~10% of the actual gross
+- High-gross movies are predicted more accurately than low-gross movies
+- Demonstrates stability as it performs very similarly between cross-validation
+and full-data predictions. 
 
 
 
