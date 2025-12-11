@@ -318,7 +318,7 @@ and full-data predictions.
 
 ## LASSO Model: 
 
-```{r lasso}
+```{r lasso, warning=FALSE}
 # data
 ds <- read.csv("clean_movie_data.csv")
 df <- na.omit(ds)
@@ -395,14 +395,19 @@ coef_clean <- coef(cv_lasso, s = "lambda.min") %>%
   select(variable, level, coefficient, abs_coef, interpretation) %>%
   arrange(desc(abs_coef))
 
-coef_clean
+head(coef_clean)
 
-# rmse
+```
+
+## LASSO
+
+*Results*
+
+```{r, echo=FALSE}
 pred <- predict(cv_lasso, newx=X, s="lambda.min")
 rmse <- sqrt(mean((y-pred)^2))
 cat("LASSO rmse: $",rmse)
 ```
-*Results*
 
 - The baseline/intercept we are given is a gross of ~554 million dollars. 
 - The coefficients we see are based on the income compared to the baseline. For example, Tom Hanks would be predicted to earn about 28.4 million dollars more than the assumed baseline, but Nicole Kidman would be predicted to make about 27.2 million dollars less than the baseline.
@@ -410,6 +415,6 @@ cat("LASSO rmse: $",rmse)
 - RMSE = 38.5 million dollars, meaning that on average, this lasso model's predictions for movie revenue is off by about 38.5 million dollars
 
 
-
+## Overall Results and Conclusion
 
 
