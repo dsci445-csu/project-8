@@ -49,6 +49,7 @@ folds <- vfold_cv(clean_data, v = 10)
 grid_net <- grid_regular(penalty(),
                          mixture(range = c(0,1)),
                          levels = 20)
+the_metrics <- metric_set(rmse, rsq, mae)
 tuned_results <- tune_grid(net_workflow,
                            resamples = folds,
                            grid = grid_net,
