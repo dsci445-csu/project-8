@@ -28,6 +28,7 @@ data <- read.csv('Movie_Industry_1554_84.csv')
 sum(is.na(data))  ## Making sure there is no NA data
 
 head(data)
+colnames(data)
 ```
 
 
@@ -169,33 +170,47 @@ coef_lasso <- coef_lasso[coef_lasso != 0]
 
 pred <- predict(cv_lasso, newx=X, s="lambda.min")
 
-coef_df <- coef(cv_lasso, s = "lambda.min") %>%
+coef_clean <- coef(cv_lasso, s = "lambda.min") %>%
   as.matrix() %>%
   as.data.frame() %>%
-  tibble::rownames_to_column("term") %>%
+  rownames_to_column("term") %>%
   rename(coefficient = 2) %>%
-  filter(coefficient != 0)
-
-# Clean variable + level names
-coef_clean <- coef_df %>%
+  filter(coefficient != 0) %>%
   mutate(
     variable = case_when(
+      term == "(Intercept)" ~ "(Intercept)",
       str_starts(term, "star") ~ "star",
       str_starts(term, "genre") ~ "genre",
       str_starts(term, "rating") ~ "rating",
-      TRUE ~ term
-      ),
+      TRUE ~ term         # numeric variables
+    ),
 
-    level=case_when(
-      variable %in% c("star", "genre", "rating") ~ str_remove(term, variable),
+    # Extract category level (only for factors)
+    level = case_when(
+      variable %in% c("star", "genre", "rating") ~ 
+        str_remove(term, paste0(variable)),
       TRUE ~ NA_character_
     ),
     level = str_trim(level),
 
     coefficient = round(coefficient, 2),
-    abs_coef = round(abs(coefficient), 2)
+    abs_coef = round(abs(coefficient), 2),
+
+    interpretation = case_when(
+      variable == "(Intercept)" ~
+        "Baseline predicted gross at all reference categories.",
+      
+      variable == "budget_missing" ~
+        "Difference in gross when the budget was missing.",
+      
+      variable %in% c("star","genre","rating") ~
+        paste0("Effect of category '", level, 
+               "' relative to the reference ", variable, "."),
+
+      TRUE ~ paste0("Effect of a 1-unit increase in ", variable, ".")
+    )
   ) %>%
-  select(variable, level, coefficient, abs_coef) %>%
+  select(variable, level, coefficient, abs_coef, interpretation) %>%
   arrange(desc(abs_coef))
 
 coef_clean
@@ -207,9 +222,37 @@ cat("LASSO rmse: $",rmse)
 ```
 
 
-The LASSO model automatically selected the most influential predictors for gross revenue. 
-Positive coefficients indicate variables that increase predicted gross, and negative coefficients indicate variables that decrease it. 
-For example, certain top stars and genres had the largest positive effects, while some other categories reduced predicted gross. 
-Many variables were shrunk to zero, indicating they were not strongly predictive in this dataset.
+
+
+
+* What does LASSO do?
+shrinks coefficients toward zero
+removes any variable the model thinks is not useful
+keeps only the predictors that help explain variance in gross revenue
+returns a model with only variables that add predictive power
+"Which actors and numeric predictors remain usful for predicting gross revenue?
+
+
+```{r}
+## The baseline/intercept we are given is a gross of ~$554 million. The coefficients we see are based on the income compared to the baseline. Thus, Tom Hanks would be predicted to earn about $28.4 more than the assumed baseline, but Nicole Kidman would be predicted to make about $27.2 million less than rhe baseline.
+
+
+## This lasso model identified leading actors as some of the most powerful predictors (associations)
+
+
+
+## RMSE = 38.5 million dollars
+## on average, this lasso model's predictions for movie revenue is off by about $38.5 million
+
+
+
+
+## the regularized regression model identified several actor-related predictors as to be having the largest effects on revenue. The model's intercept was approximately $554 million. This represents the baseline predicted revenue for a movie when all of the dummy predictors are at their reference levels. We can see different actors that have impacts on the model and we can see how much they earn based on the baseline. We can see actors such as Tom Hanks and Sandra Bullock earning about $28.45 and $23 million over the baseline repectively. We can also see actors like Johnny Depp and Nicole Kidman who are predicted to earn about $16.4 and $27.2 million less than the baseline. The budget_missing indicator also had a notable effect, since it predicted that films without reported budgets tend to earn substaintially less than those with reported budgets.
+
+## we are also given the lasso model's root mean squared error at about $38.5 million. RMSE represents the typical size of the prediction error, specifically in this model, the average distance between the predicted revenue and the actual revenue. Given our baseline revenue level of about $554 million, the rmse of $38.5 would represent about 7% of the unexplained variance. 
+
+
+
+```
 
 
