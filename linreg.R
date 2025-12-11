@@ -41,6 +41,13 @@ clean_data_lm <- clean_data |>
 
 lm_full <- lm(gross ~ ., data = clean_data_lm)
 
+preds_log <- fitted(lm_full)
+preds_dollars <- exp(preds_log) - 1
+
+obs_log <- lm_full$model$gross
+obs_dollars <- exp(obs_log) - 1
+
+rmse_dollars <- sqrt(mean((obs_dollars - preds_dollars)^2))
 
 obs <- lm_full$model$gross
 preds <- fitted(lm_full)   

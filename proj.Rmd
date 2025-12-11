@@ -110,20 +110,20 @@ head(df)
 model_sentiment <- lm(gross ~ sentiment_best, data = df)
 
 # Score and votes separately
-model_score     <- lm(gross ~ score, data = df)
-model_votes     <- lm(gross ~ votes, data = df)
+model_score <- lm(gross ~ score, data = df)
+model_votes <- lm(gross ~ votes, data = df)
 
 # Score and votes combined
 model_score_votes <- lm(gross ~ score + votes, data = df)
 
 # Year
-model_year      <- lm(gross ~ year, data = df)
+model_year <- lm(gross ~ year, data = df)
 
 # Month (numeric)
-model_month     <- lm(gross ~ release_month, data = df)
+model_month <- lm(gross ~ release_month, data = df)
 
 # Season (categorical)
-model_season    <- lm(gross ~ season, data = df)
+model_season <- lm(gross ~ season, data = df)
 
 summary(model_sentiment)
 summary(model_score)
@@ -172,4 +172,29 @@ ggplot(df, aes(x = year, y = gross)) +
   theme_minimal()
 ```
 
+```{r}
+lm_full <- lm(gross ~ ., data = clean_data_lm)
+summary(lm_full)
+
+preds_log <- fitted(lm_full)
+preds_dollars <- exp(preds_log) - 1
+
+obs_log <- lm_full$model$gross
+obs_dollars <- exp(obs_log) - 1
+
+rmse_dollars <- sqrt(mean((obs_dollars - preds_dollars)^2))
+rmse_dollars
+
+rsq_lm <- 1 - sum((obs_log - preds_log)^2) /
+               sum((obs_log - mean(obs_log))^2)
+
+rsq_lm
+```
+```{r}
+sig_preds <- tidy(lm_full) %>%
+  filter(p.value < 0.05) %>%  
+  arrange(p.value)    
+
+sig_preds
+```
 

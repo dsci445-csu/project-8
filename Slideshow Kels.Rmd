@@ -12,21 +12,64 @@ set.seed(445)
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(tidymodels)
+library(knitr)
+library(kableExtra)
 clean_data <- read_csv("clean_movie_data.csv")
+source("linreg.R")
 ```
+
 ## Introduction
 
 
 
 
-# Data Cleaning
-
-## Release Date & Movie Title
+## Data Cleaning
 
 **Date**
-  - extracted month from "date" column 
-  - used this to assign each entry a season (Fall, Winter, Spring, Summer)
+
+  - Extracted month from "date" column 
+  - Used this to assign each entry a season (Fall, Winter, Spring, Summer)
+  
 **Movie Title**
-  - Sentiment Analysis
+
+  - Sentiment analysis using AFINN
+  - Added Punctuation
+
+## Pure Linear Regression
+
+- Used cleaned predictors from compiled csv
+- Fit on log(gross) scale for stability
+- Predictions were coverted back on dollars scale
+
+## Model Performance
+
+**$R^2$ = 0.594**
+
+**RMSE = $42.3 million**
 
 ## 
+
+```{r}
+significant_table <- tidy(lm_full) %>%
+  filter(p.value < 0.05) %>%
+  mutate(
+    pct_impact = round((exp(estimate) - 1) * 100, 2),
+    p.value = signif(p.value, 3)
+  ) %>%
+  arrange(desc(abs(pct_impact))) %>%
+    select(
+    Predictor = term,
+    `Percent Impact on Gross` = pct_impact,
+    `p-value` = p.value) 
+
+top10_table <- significant_table %>%
+  slice(1:10)
+  
+top10_table %>%
+  kable(format = "html", caption = "Most Significant Predictors") %>%
+  kable_styling(full_width = FALSE)
+```
+
+##
+
+
