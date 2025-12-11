@@ -59,7 +59,16 @@ sig_preds <- tidy(lm_full) %>%
   filter(p.value < 0.05) %>%              
   arrange(p.value)                        
 
+preds_log <- fitted(lm_full)
+preds_dollars <- exp(preds_log) - 1
 
+obs_log <- lm_full$model$gross
+obs_dollars <- exp(obs_log) - 1
+
+plot_df <- data.frame(
+  Actual = obs_dollars,
+  Predicted = preds_dollars
+)
 
 
 

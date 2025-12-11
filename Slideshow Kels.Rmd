@@ -110,6 +110,8 @@ coef_df <- data.frame(predictor = rownames(non_z_co),
 
 **RMSE = $42.3 million**
 
+**MAE = 19043383**
+
 ## 
 
 ```{r}
@@ -136,20 +138,10 @@ top10_table %>%
 ##
 
 ```{r}
-preds_log <- fitted(lm_full)
-preds_dollars <- exp(preds_log) - 1
-
-obs_log <- lm_full$model$gross
-obs_dollars <- exp(obs_log) - 1
-
-plot_df <- data.frame(
-  Actual = obs_dollars,
-  Predicted = preds_dollars
-)
 
 ggplot(plot_df, aes(x = Actual, y = Predicted)) +
   geom_point(alpha = 0.3) +
-  geom_abline(intercept = 0, slope = 1, color = "red", size = 1) +
+  geom_abline(intercept = 0, slope = 1, color = "red") +
   scale_x_continuous(labels = scales::dollar) +
   scale_y_continuous(labels = scales::dollar) +
   labs(
@@ -170,20 +162,25 @@ Elastic Net is a shrinkage model that combines LASSO and Ridge Regression
 penalties.
 
 - Why Elastic Net:
-Large amount of predictors that aren't meaningful are dropped
-Handles collinearity well like assuming comp_freq and director popularity
-Able to rank predictors
-Stabilize coefficients of correlated predictors
 
-Since main goal was to identify strongest predictors, we did not remove 
-possible correlated terms and did not create interaction terms. 
+  - Large amount of predictors that aren't meaningful are dropped
+  
+  - Handles collinearity well like assuming comp_freq and director popularity
+  
+  - Able to rank predictors
+  - Stabilize coefficients of correlated predictors
+
+Since our primary goal was to identify strongest predictors, we did not remove possible correlated terms and did not create interaction terms. 
 
 
 ## Handling Data: 
 
 - How: 
+
 ** Log transformed gross (response variable) 
-** Log +1 transformed all numeric predictors 
+
+** Log +1 transformed all numeric predictors
+
 ** Dummy encoded the categorical variables: Genre, Region, Rating and Season
 
 10 fold cross-validation 
@@ -200,10 +197,15 @@ Finally we are able to pass this back to the workflow and come up with the best
 elastic net model. 
 
 **Cross Validation:**
+
 Best Lambda: 0.02636651
+
 Best Alpha: 0.4736842
+
 RMSE: 1.575973  
+
 R^2: 0.584
+
 MAE: 1.13
 
 ```{r MAECV}
@@ -212,9 +214,13 @@ exp(1.13)
 
 
 ## Prediction Model: 
+
 **Prediction:**
-RMSE: 1.564085	
+
+RMSE: 1.564085
+
 R^2 : 0.5909
+
 MAE: 1.120881
 
 ```{r MAEPred}
@@ -230,6 +236,8 @@ close, indicating the model is stable and not overfitting.
 
 The RMSE relative to the average gross is abt. 10%. AKA the 
 model predicts movie revenue with roughly +/- 10% accuracy.
+
+##
 
 ```{r actual v pred visual}
 act_pred <- ggplot(data = preds, mapping = aes(x = gross, y = .pred)) +
@@ -247,21 +255,23 @@ Total predictors: 53
 
 Leftover: 39 and Shrunk to Zero: 14
 
-### Strongest predictors:
+**Strongest predictors:**
 - Votes (0.966)
 - comp_freq (0.444)
 - rating_Unknown (-0.441)
 
-### Moderate Predictors:
+**Moderate Predictors:**
 - Director_popularity (0.225)
 - Runtime (0.179)
 - Budget (0.113)
 
 
-### Predictors that shrunk to 0:
-- sentiment
+**Predictors that shrunk to 0:**
+- Sentiment
 - Oceania
-- genre: Musical
+- Genre: Musical
+
+##
 
 ```{r predictor barplot}
 
