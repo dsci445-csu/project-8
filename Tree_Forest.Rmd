@@ -2,7 +2,7 @@
 title: "Tree_Forest"
 output: html_document
 ---
-
+PLEASE RUN IN ORDER SOME VARIBLE NAMES GOT REUSED IN THE BINNED MODEL
 ```{r}
 set.seed(567)
 library(tidyverse)
@@ -317,5 +317,270 @@ ggplot(plot_data_binned, aes(x = avg_budget, y = bin_rmse)) +
 
 ```{r}
 saveRDS(final_fit_results, "final_rf_results.rds") 
+```
+```{r}
+movies_fresh_2 <- movies_fresh %>% 
+  count(director, name = "movie_count")
+ggplot(movies_fresh_2, aes(x = movie_count)) +
+  geom_histogram(binwidth = 1, fill = "#2c3e50", color = "white") +
+  
+  # Log scale usually helps here because 90% of directors only made 1 movie
+  
+  labs(
+    title = "Distribution of Director Activity",
+    subtitle = "Most directors have 1 movie. Look for the 'tail' to set your High/Low cutoff.",
+    x = "Number of Movies Directed",
+    y = "Count of Directors (Log Scale)"
+  ) +
+  theme_minimal()
+
+
+```
+Quick sanity check of with different encoding FIX VARIBLE NAMES 
+```{r}
+# 1. Define the Cutoff
+cutoff <- 3
+
+# 2. Create lists of "Prolific" entities
+top_directors <- train_data %>% count(director) %>% filter(n >= cutoff) %>% pull(director)
+top_writers   <- train_data %>% count(writer)   %>% filter(n >= cutoff) %>% pull(writer)
+top_stars     <- train_data %>% count(star)     %>% filter(n >= cutoff) %>% pull(star)
+top_companies <- train_data %>% count(company)  %>% filter(n >= cutoff) %>% pull(company)
+top_countries <- train_data %>% count(country)  %>% filter(n >= cutoff) %>% pull(country)
+
+# 3. The Corrected Recipe
+movie_rec_binned <- recipe(gross ~ ., data = train_data) %>%
+  update_role(name, new_role = "id") %>%
+  # MANUAL BINNING
+  step_mutate(
+    director = ifelse(director %in% top_directors, "High_Exp", "Low_Exp"),
+    writer   = ifelse(writer   %in% top_writers,   "High_Exp", "Low_Exp"),
+    star     = ifelse(star     %in% top_stars,     "High_Exp", "Low_Exp"),
+    company  = ifelse(company  %in% top_companies, "High_Exp", "Low_Exp"),
+    country  = ifelse(country  %in% top_countries, "High_Exp", "Low_Exp")
+  ) %>%
+
+  # Convert to Factors
+  step_string2factor(all_nominal_predictors()) %>%
+  
+  # FIX 2: Explicitly Unorder the Month (treat Jan/Feb as equal categories, not a rank)
+  step_unorder(release_month) %>% 
+  
+  # Handle missing/new data
+  step_unknown(release_month, genre, rating) %>%
+  step_novel(release_month, genre, rating) %>% 
+  
+  # Clean Rating Categories
+  step_mutate(rating = fct_collapse(rating, NR = c("UNRATED", "Not specified", "NOT RATED", 
+         "TV-PG", "TV-MA", "TV-14", "B", "B15"))) %>% 
+  
+  # Dummy Encode
+  step_dummy(all_nominal_predictors()) %>% 
+  
+  step_rm(X)
+
+# 4. Verify
+prepped <- prep(movie_rec_binned, training = train_data)
+processed_data_binned <- bake(prepped, new_data = NULL)
+
+```
+```{r}
+data_split <- initial_split(movies_fresh, prop = 0.75, strata = gross)
+train_data <- training(data_split)
+test_data  <- testing(data_split)
+folds <- vfold_cv(train_data, v = 5)
+
+forest_workflow_binned <- workflow() %>% 
+  add_recipe(movie_rec_binned) %>% 
+  add_model(forest_spec)
+```
+
+```{r}
+test <- lm(gross ~.-name-votes, data = processed_data_binned)
+summary(test)
+```
+```{r}
+forest_params <- extract_parameter_set_dials(forest_workflow) %>%
+  update(mtry = mtry(range = c(1, 50)))
+
+binned_inital_results <- tune_grid(
+  forest_workflow_binned,
+  resamples = folds,
+  grid = 5,
+  control = control_grid(save_pred = TRUE)
+)
+
+forest_results <- tune_bayes(
+  forest_workflow_binned, 
+  resamples = folds,
+  iter = 20,
+  initial = binned_inital_results,
+  param_info = forest_params,
+  control = control_bayes(no_improve = 10, save_pred = T)
+)
+```
+```{r}
+best_params_rf <- select_best(forest_results, metric = "rmse")
+final_forest_workflow <- forest_workflow_binned %>%
+  finalize_workflow(best_params_rf) %>% 
+  
+  # OVERRIDE: Set the final tree count to 1000 for maximum accuracy
+  update_model(
+    rand_forest(trees = 1000) %>% 
+      set_engine("ranger") %>% 
+      set_mode("regression")
+  )
+
+final_fit_results <- last_fit(final_forest_workflow, split = data_split)
+
+
+```
+
+```{r}
+collect_metrics(final_fit_results)
+```
+```{r}
+rsq_val <- collect_metrics(final_fit_results) %>%
+  filter(.metric == "rsq") %>%
+  pull(.estimate)
+
+final_predictions_dollars <- collect_predictions(final_fit_results) %>%
+  mutate(
+    pred_dollars = exp(.pred), 
+    gross_dollars = exp(gross) 
+  ) %>%
+  # Join with test data to get the 'score' back for plotting
+  bind_cols(testing(data_split) %>% select(score))
+
+# 2. Calculate TRUE Dollar RMSE (for the subtitle)
+dollar_rmse <- final_predictions_dollars %>%
+  metrics(truth = gross_dollars, estimate = pred_dollars) %>%
+  filter(.metric == "rmse") %>%
+  pull(.estimate)
+
+# 3. Generate the Plot with Coloring
+predicted_vs_actual_plot <- final_predictions_dollars %>%
+  ggplot(aes(x = gross_dollars, y = pred_dollars, color = score)) + # <--- ADDED COLOR HERE
+    
+    # Points
+    geom_point(alpha = 0.6, size = 2, color = "blue") +
+    
+    # Perfect fit line
+    geom_abline(lty = 2, color = "red", size = 1.2) +
+
+    
+    # Log Scales for Axes (Keeps dollars readable)
+    scale_x_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+    scale_y_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+    
+    # Aesthetics
+    labs(
+        title = "Random Forest: Predicted vs. Actual Revenue",
+        subtitle = paste0("R-Squared: ", round(rsq_val, 3), 
+                          " | True Dollar RMSE: ", scales::dollar(dollar_rmse)),
+        x = "Actual Gross Revenue",
+        y = "Predicted Gross Revenue"
+    ) +
+    coord_fixed() + 
+    theme_minimal()
+
+print(predicted_vs_actual_plot)
+```
+```{r}
+# 1. Calculate Global MAE (Mean Absolute Error)
+#    This tells you: "On average, the prediction is off by $X."
+mae_val <- final_predictions_dollars %>%
+  metrics(truth = gross_dollars, estimate = pred_dollars) %>%
+  filter(.metric == "mae") %>%
+  pull(.estimate)
+
+print(paste0("Global MAE: ", scales::dollar(mae_val)))
+
+
+# 2. Create the "RMSE vs. Gross" Plot (Binned Analysis)
+#    We split movies into 10 buckets (deciles) based on their actual revenue
+rmse_by_bin <- final_predictions_dollars %>%
+  mutate(
+    # Create 10 bins based on actual revenue
+    revenue_bin = ntile(gross_dollars, 10)
+  ) %>%
+  group_by(revenue_bin) %>%
+  summarise(
+    # Calculate RMSE for just this specific group of movies
+    bin_rmse = sqrt(mean((gross_dollars - pred_dollars)^2)),
+    # Get the average revenue of this bin so we can plot it on the X-axis
+    avg_revenue = median(gross_dollars),
+    n_movies = n()
+  )
+
+# 3. Generate the Plot
+rmse_plot <- ggplot(rmse_by_bin, aes(x = avg_revenue, y = bin_rmse)) +
+  # Draw the trend line
+  geom_line(color = "gray50", lty = 2) +
+  geom_point(size = 4, color = "darkred") +
+  
+  # Log scales are essential here because blockbusters are HUGE
+  scale_x_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  scale_y_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  
+  labs(
+    title = "Does the Model Struggle with Blockbusters?",
+    subtitle = paste0("Global MAE: ", scales::dollar(mae_val), 
+                      " | Plot shows RMSE calculated for 10 distinct revenue buckets"),
+    x = "Median Revenue of Bin (Log Scale)",
+    y = "RMSE of Bin (Log Scale)"
+  ) +
+  theme_minimal()
+
+print(rmse_plot)
+```
+```{r}
+library(ggplot2)
+library(scales)
+library(patchwork) # Optional: for side-by-side plotting
+
+# 1. Calculate the Dollar Residuals
+residual_data <- final_predictions_dollars %>%
+  mutate(resid_dollars = gross_dollars - pred_dollars)
+
+# 2. Residual Plot (Predicted vs. Residuals)
+#    Look for: Random scatter around the red line. 
+#    If you see a "Fan" shape (errors getting bigger as money gets bigger), that is normal for movies.
+p_resid <- ggplot(residual_data, aes(x = pred_dollars, y = resid_dollars)) +
+  geom_point(alpha = 0.5, color = "steelblue") +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  
+  # Log scale on X helps separate indie movies from blockbusters visually
+  scale_x_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  scale_y_continuous(labels = label_dollar(scale_cut = cut_short_scale())) +
+  
+  labs(
+    title = "Residual Plot (Real Dollars)",
+    subtitle = "Are we consistently over/under predicting?",
+    x = "Predicted Revenue (Log Scale)",
+    y = "Residual (Actual - Predicted)"
+  ) +
+  theme_minimal()
+
+# 3. Normal Q-Q Plot
+#    Look for: Dots hugging the diagonal line.
+#    "Heavy Tails" (dots curving away at ends) means you have extreme outliers (huge hits or huge flops).
+p_qq <- ggplot(residual_data, aes(sample = resid_dollars)) +
+  stat_qq(alpha = 0.5) +
+  stat_qq_line(color = "red") +
+  labs(
+    title = "Normal Q-Q Plot",
+    subtitle = "Do the errors follow a Normal Distribution?",
+    x = "Theoretical Quantiles",
+    y = "Sample Quantiles"
+  ) +
+  theme_minimal()
+
+# Display plots
+# If you don't have 'patchwork' installed, just print p_resid and p_qq separately
+p_resid / p_qq
+```
+```{r}
+saveRDS(final_fit_results, "binned_rf_results.rds") 
 ```
 
