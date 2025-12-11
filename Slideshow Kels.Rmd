@@ -67,7 +67,7 @@ Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, 
 
 - Used cleaned predictors from compiled csv
 - Fit on log(gross) scale for stability
-- Predictions were coverted back to the dollar scale for interpretation
+- Predictions were converted back to the dollar scale for interpretation
 
 ## Model Performance
 
@@ -212,7 +212,7 @@ Best Alpha: 0.4736842
 
 RMSE: 1.575973  
 
-R^2: 0.584
+$R^2$: 0.584
 
 MAE: 1.13
 
@@ -315,7 +315,7 @@ and full-data predictions.
 
 ## LASSO Model: 
 
-```{r lasso, warning=FALSE, warning = FALSE}
+```{r lasso, warning=FALSE, message = FALSE}
 
 library(glmnet)
 library(dplyr)
@@ -388,9 +388,8 @@ head(coef_clean)
 
 ```
 
-## LASSO
+## Results
 
-*Results*
 ```{r, echo=FALSE}
 pred <- predict(cv_lasso, newx=X, s="lambda.min")
 rmse <- sqrt(mean((y-pred)^2))
