@@ -153,7 +153,6 @@ act_pred
 ```
 
 
-
 ## Predictors:
 
 Total predictors: 53
@@ -199,7 +198,7 @@ bar_pred
 ```
 
 
-## Overall Takeaway:
+## Elastic Net Takeaway:
 
 - Identified important predictors
 - Predicts movie gross within ~10% of the actual gross
