@@ -210,15 +210,13 @@ Best Lambda: 0.02636651
 
 Best Alpha: 0.4736842
 
-RMSE: 1.575973  
+RMSE: $38.5 million  
 
 $R^2$: 0.584
 
-MAE: 1.13
+MAE: 1.17
 
 ```{r MAECV}
-exp(1.5759 ) -1
-exp(1.564) -1
 exp(1.13)
 ```
 
@@ -227,7 +225,7 @@ exp(1.13)
 
 **Prediction:**
 
-RMSE: 1.564085
+RMSE: $37.7 million
 
 R^2 : 0.5909
 
@@ -245,8 +243,6 @@ close, indicating the model is stable and not overfitting.
 
 ```
 
-The RMSE relative to the average gross is abt. 10%. AKA the 
-model predicts movie revenue with roughly +/- 10% accuracy.
 
 ##
 
@@ -310,7 +306,6 @@ bar_pred
 ## Elastic Net Takeaway:
 
 - Identified important predictors
-- Predicts movie gross within ~10% of the actual gross
 - High-gross movies are predicted more accurately than low-gross movies
 - Demonstrates stability as it performs very similarly between cross-validation
 and full-data predictions. 
