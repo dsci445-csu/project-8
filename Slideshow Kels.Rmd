@@ -228,7 +228,7 @@ RMSE: $38.5 million
 
 $R^2$: 0.584
 
-MAE: 19.3 million
+MAE: $19.3 million
 
 
 ## Prediction Model: 
@@ -242,7 +242,7 @@ R^2 : 0.5909
 MAE: $18.4 million
 
 
-The RMSE from cross-validation (1.57) and RMSE from prediction (1.56) are very 
+The RMSE from cross-validation (38.5 million) and RMSE from prediction (37.7 million) are very 
 close, indicating the model is stable and not overfitting.
 
 
