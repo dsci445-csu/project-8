@@ -60,7 +60,7 @@ Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, 
 **Country**
   - Assigned to regions
   
-**Genre, Rating, & Stars**
+**Genre, Rating, Writer & Stars**
   - Also quantified with frequency in dataset
 
 ## Pure Linear Regression
@@ -468,7 +468,6 @@ ggplot(combined_plot_data, aes(x = truth_dollars, y = pred_dollars)) +
 ```
 
 ## Random Forest Performance {.columns-2}
-<br>
 
 ```{r calc-metrics, echo=FALSE, fig.width=6, out.width="100%"}
 mape_val <- binned_plot_data %>%
@@ -479,18 +478,16 @@ mape_val <- binned_plot_data %>%
   pull(score)
 
 perf_metrics <- tibble(
-  Metric = c("R-Squared", "RMSE (Dollars)", "MAE (Dollars)", "MdAPE (Avg % Error)"),
+  Metric = c("R-Squared", "RMSE (Dollars)", "MAE (Dollars)", "MdAPE (Median Avg % Error)"),
   Value = c(
     r2_binary, 
     scales::dollar(rmse(binned_plot_data, truth = truth_dollars, estimate = pred_dollars)$.estimate),
     scales::dollar(mae(binned_plot_data, truth = truth_dollars, estimate = pred_dollars)$.estimate),
-    scales::percent(mape_val, accuracy = 1) # <--- New Line
+    scales::percent(mape_val, accuracy = 1) 
   )
 )
 
 
-# 2. Calculate RMSE vs Gross Revenue (Plot)
-# We split movies into 10 "Revenue Tiers" (Deciles) to see how error changes
 rmse_by_gross <- binned_plot_data %>%
   mutate(gross_bin = ntile(truth_dollars, 10)) %>%
   group_by(gross_bin) %>%
@@ -503,15 +500,13 @@ perf_metrics %>%
   kbl() %>%
   kable_styling(font_size = 20, bootstrap_options = "striped")
 ```
-<br>
 
 * Poor model relative to the median gross revenue ~14m
 
 * Has some utility predicting high vs low performers
 
-## Overall Results and Conclusion
 
-```{r plots, echo=FALSE, out.width="100%", fig.height= 8}
+```{r plots, echo=FALSE, out.width="100%", fig.height= 7}
 
 ggplot(rmse_by_gross, aes(x = avg_gross, y = bin_rmse)) +
   geom_line(color = "#2c3e50", linewidth = 1) +
