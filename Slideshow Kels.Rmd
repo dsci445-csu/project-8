@@ -217,6 +217,8 @@ $R^2$: 0.584
 MAE: 1.13
 
 ```{r MAECV}
+exp(1.5759 ) -1
+exp(1.564) -1
 exp(1.13)
 ```
 
@@ -240,6 +242,7 @@ close, indicating the model is stable and not overfitting.
 
 ```{r avg prediction err}
 1.564085/mean(clean_data$gross)
+
 ```
 
 The RMSE relative to the average gross is abt. 10%. AKA the 
