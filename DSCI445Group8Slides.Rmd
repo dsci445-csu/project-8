@@ -62,7 +62,6 @@ Dataset: IMDb movie data (1986–2016), including budget, cast, ratings, genre, 
 **Country**
   - Assigned to regions
   
-**Genre, Rating, & Stars**
   - Also quantified with frequency in dataset
 
 ## Pure Linear Regression
@@ -164,6 +163,20 @@ non_z_co <- coef_dense[coef_dense[,1] != 0 &
                          rownames(coef_dense) != "(Intercept)", , drop = FALSE]
 coef_df <- data.frame(predictor = rownames(non_z_co),
                       coefficient = non_z_co[,1])
+
+## re-calculate MAE correctly elastic net
+#y_act <- exp(clean_data$gross)
+#y_pred <- exp(preds$.pred)
+#MAE_orig <- mean(abs(y_act-y_pred))
+#MAE_orig
+
+#cv_preds <- collect_predictions(tuned_results)
+#cv_preds <- cv_preds |>
+ #mutate(y_act = exp(gross)-1,
+         #y_pred = exp(.pred)-1)
+
+#MAE_cv <- mean(abs(cv_preds$y_act - cv_preds$y_pred))
+#MAE_cv
 ```
 
 ## Elastic Net
@@ -213,40 +226,22 @@ Best Lambda: 0.02636651
 
 Best Alpha: 0.4736842
 
-RMSE: 1.575973  
 
 $R^2$: 0.584
 
-MAE: 1.13
-
-```{r MAECV}
-exp(1.13)
-```
 
 
 ## Prediction Model: 
 
 **Prediction:**
 
-RMSE: 1.564085
 
 R^2 : 0.5909
 
-MAE: 1.120881
 
-```{r MAEPred}
-exp(1.12)
-```
 
-The RMSE from cross-validation (1.57) and RMSE from prediction (1.56) are very 
 close, indicating the model is stable and not overfitting.
 
-```{r avg prediction err}
-1.564085/mean(clean_data$gross)
-```
-
-The RMSE relative to the average gross is abt. 10%. AKA the 
-model predicts movie revenue with roughly +/- 10% accuracy.
 
 ##
 
@@ -491,18 +486,14 @@ mape_val <- binned_plot_data %>%
   pull(score)
 
 perf_metrics <- tibble(
-  Metric = c("R-Squared", "RMSE (Dollars)", "MAE (Dollars)", "MdAPE (Avg % Error)"),
   Value = c(
     r2_binary, 
     scales::dollar(rmse(binned_plot_data, truth = truth_dollars, estimate = pred_dollars)$.estimate),
     scales::dollar(mae(binned_plot_data, truth = truth_dollars, estimate = pred_dollars)$.estimate),
-    scales::percent(mape_val, accuracy = 1) # <--- New Line
   )
 )
 
 
-# 2. Calculate RMSE vs Gross Revenue (Plot)
-# We split movies into 10 "Revenue Tiers" (Deciles) to see how error changes
 rmse_by_gross <- binned_plot_data %>%
   mutate(gross_bin = ntile(truth_dollars, 10)) %>%
   group_by(gross_bin) %>%
@@ -515,11 +506,11 @@ perf_metrics %>%
   kbl() %>%
   kable_styling(font_size = 20, bootstrap_options = "striped")
 ```
-<br>
 
 * Poor model relative to the median gross revenue ~\$14m
 
 * Has some utility predicting high vs low performers
+
 
 ## Overall Results and Conclusion
 
