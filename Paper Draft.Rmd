@@ -49,7 +49,6 @@ All of these cleaning methods were combined into a single csv file for use in th
 ### Kaitlynn: LASSO
 
 ### Robin: Elastic Net
-After some group data cleaning, we were able to have 1 comprehensible dataframe with all the predictors we would need to run shrinkage and best predictor models. At the end of the cleaning we were still left with 4 columns that were character values: genre, rating, region, and season. To handle this I relied on dummy encoding, hoping the model would select the best reference category. The rest being numerical data, I log transformed (log(variable + 1) so zero was not an issue). This was hoping that skew would be more controlled. The process to build the net model was using a recipe, letting R choose the possibilities for the lambda value, and constraining alpha to between 0 and 1. Then using cross validation with the end goal to find the best lambda and alpha that resulted in the lowest RMSE. Fitting the final model, the RMSE was 1.56 and R^2 was 0.59. To see how far off predictions were I divided 1.56 by the mean of the original gross that was log transformed. This told us that the predictions from this elastic net were about 10% off. (Need to add the “best coefficients/predictors” that elastic net found, residuals vs fitted, and QQplot)
 
 
 ### James: Tree Boosted/ Bagged Random
