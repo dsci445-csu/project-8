@@ -162,6 +162,20 @@ non_z_co <- coef_dense[coef_dense[,1] != 0 &
                          rownames(coef_dense) != "(Intercept)", , drop = FALSE]
 coef_df <- data.frame(predictor = rownames(non_z_co),
                       coefficient = non_z_co[,1])
+
+## re-calculate MAE correctly elastic net
+#y_act <- exp(clean_data$gross)
+#y_pred <- exp(preds$.pred)
+#MAE_orig <- mean(abs(y_act-y_pred))
+#MAE_orig
+
+#cv_preds <- collect_predictions(tuned_results)
+#cv_preds <- cv_preds |>
+ #mutate(y_act = exp(gross)-1,
+         #y_pred = exp(.pred)-1)
+
+#MAE_cv <- mean(abs(cv_preds$y_act - cv_preds$y_pred))
+#MAE_cv
 ```
 
 ## Elastic Net
@@ -214,11 +228,7 @@ RMSE: $38.5 million
 
 $R^2$: 0.584
 
-MAE: 1.17
-
-```{r MAECV}
-exp(1.13)
-```
+MAE: 19.3 million
 
 
 ## Prediction Model: 
@@ -229,19 +239,11 @@ RMSE: $37.7 million
 
 R^2 : 0.5909
 
-MAE: 1.120881
+MAE: $18.4 million
 
-```{r MAEPred}
-exp(1.12)
-```
 
 The RMSE from cross-validation (1.57) and RMSE from prediction (1.56) are very 
 close, indicating the model is stable and not overfitting.
-
-```{r avg prediction err}
-1.564085/mean(clean_data$gross)
-
-```
 
 
 ##
