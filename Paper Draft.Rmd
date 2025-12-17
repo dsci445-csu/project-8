@@ -47,7 +47,7 @@ knitr::opts_chunk$set(
 ```
 
 
-```{r elastic net, echo = FALSE, cache = TRUE}
+```{r elastic net, echo = FALSE}
 clean_data <- read_csv("clean_movie_data.csv") 
 
 ## removing columns that are repeats/not predictors (id)
