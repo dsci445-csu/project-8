@@ -69,7 +69,7 @@ The tree based methods achieved and rsq of .508 and a rmse of roughly 40 million
 
 ## Conclusion/Changes if we did it again:
 
-Across all modeling approaches a consistent set of predictors were revealed as the most influential in determining gross. This would be votes, company frequency, director popularity, and star popularity. In terms of performance, we used RMSE as our measure of comparing models. Linear Regression came in at the highest RMSE, and following was Tree-based models, LASSO, and Elastic Net. Their respective RMSEs being --, --, --, and \$37.7 million. 
+Across all modeling approaches a consistent set of predictors were revealed as the most influential in determining gross. This would be votes, company frequency, director popularity, and star popularity. In terms of performance, we used RMSE as our measure of comparing models. Linear Regression came in at the highest RMSE, and following was Tree-based models, LASSO, and Elastic Net. Their respective RMSEs being \$--, \$--, \$--, and \$37.7 million. 
 
 Despite the different approaches we took, the models agreed on the most influential predictors. We can generalize the strongest predictors as: audience engagement and industry reputation. For real world application we could say that for films to be financially successful they should heavily advertise, cast popular actors, and have known directors direct the film. 
 
