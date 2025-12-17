@@ -9,6 +9,32 @@ fontsize: 11pt
 geometry: margin=1in
 ---
 
+```{r seed}
+set.seed(445)
+```
+
+```{r libraries, echo = FALSE, message= FALSE}
+library(broom)
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(readxl)
+library(ggplot2)
+library(tidyr)
+library(tidyverse)
+library(glmnet)
+library(tree)
+library(randomForest)
+library(caret)
+library(rsample)
+library(tidymodels)
+library(workflows)
+library(recipes)
+library(glmnet)
+library(yardstick)
+library(Matrix)
+```
+
 ```{r setup, echo = FALSE}
 knitr::opts_chunk$set(
   echo = FALSE,
@@ -19,6 +45,131 @@ knitr::opts_chunk$set(
   fig.height = 5
 )
 ```
+
+
+```{r elastic net, echo = FALSE, cache = TRUE}
+clean_data <- read_csv("clean_movie_data.csv") 
+
+## removing columns that are repeats/not predictors (id)
+clean_data <- clean_data |>
+  select(-c("X", "country", "director", "name", "writer", 
+            "company", "star", "id", "budget_missing", "year", 
+            "release_month", "writer_count", "director_count", 
+            "direc_freq","star_count"))
+
+## Collapsing rating, more digestible, better for dummy encoding
+clean_data <- clean_data |>
+              mutate(rating = ifelse(rating %in% c("UNRATED", "NOT RATED", 
+                                                   "Not specified"), 
+                                     "Unknown", rating))
+## log transforming gross, helping w skew
+clean_data <- clean_data |>
+  mutate(gross = log(gross + 1))
+## net recipe, and making sure the other numeric values are log transformed
+## to maintain consistency w gross.
+## all the steps are to ensure glmnet works
+net_recipe <- recipe(gross ~ ., data = clean_data) |>
+  step_mutate(budget = log(budget+1),
+              votes = log(votes +1),
+              comp_freq = log(comp_freq + 1),
+              runtime = log(runtime + 1),
+              score = log(score + 1),
+              writer_popularity = log(writer_popularity + 1),
+              director_popularity = log(director_popularity +1),
+              star_popularity = log(star_popularity + 1)) |>
+  step_novel(all_nominal_predictors()) |> ## takes care of factor lvls
+  step_unknown(all_nominal_predictors()) |> ## handles missing vals. 
+  step_dummy(rating, genre, region, season) |> ## categorical vars.
+  step_zv(all_predictors()) |> ## removes zero-variance col.
+  step_normalize(all_numeric_predictors()) ## standardizes
+  
+## elastic net model w ridge and lasso penalties, tune() being chosen
+elast_net <- linear_reg(penalty = tune(), mixture = tune()) |>
+  set_engine("glmnet") 
+
+## puts all the steps together 
+net_workflow <- workflow() |>
+  add_recipe(net_recipe) |>
+  add_model(elast_net)
+
+
+## splits data into train and test 10 fold cross valdation time. 
+folds <- vfold_cv(clean_data, v = 10)
+
+## range for potential lambda and alpha, 10 evenly spaced pts.
+grid_net <- grid_regular(penalty(),
+                         mixture(range = c(0,1)),
+                         levels = 20)
+
+## trying different lambda and alpha --> hyperparameters
+## penalty (lambda) controls shrinkage
+## mixture (alpha) controls type of shrinkage 
+##   alpha = 1 is lasso alpha = 0 is ridge and anything in between is elastic net :D
+
+the_metrics <- metric_set(rmse, rsq, mae)
+tuned_results <- tune_grid(net_workflow,
+                           resamples = folds,
+                           grid = grid_net,
+                           control = control_grid(save_pred = TRUE),
+                           metrics = the_metrics)
+
+## So we know what is being selected
+select_best(tuned_results, metric = "rmse")
+
+
+## finding best lambda and alpha
+best_parameters <- tuned_results |>
+  select_best(metric = "rmse")
+
+cv_mets <- collect_metrics(tuned_results)
+mae_CV <- cv_mets |>
+  filter(.metric == "mae",
+         near(penalty, best_parameters$penalty),
+         near(mixture, best_parameters$mixture))
+
+r_sq <- cv_mets |>
+  filter(.metric == "rsq",
+         near(penalty, best_parameters$penalty),
+         near(mixture, best_parameters$mixture))
+
+## only using the best parameters found
+final_net <- finalize_workflow(net_workflow, best_parameters)
+
+## resultt
+final_fit <- fit(final_net, data = clean_data)
+
+preds <- predict(final_fit, clean_data) |>
+  bind_cols(clean_data)
+
+#mae(preds, truth = gross, estimate = .pred)
+
+## want rmse and rsq, indicative of quality of prediction model
+#rmse(preds, truth = gross, estimate = .pred)
+
+#rsq(preds, truth = gross, estimate = .pred)
+
+## The actual fitted glmnet model that contains all the coefficients, ignores the workflow stuff
+glm_fit <- extract_fit_parsnip(final_fit)$fit
+
+## best lambda again
+lambda_used <- best_parameters$penalty
+
+## coefficients of the fitted model w the best lambda
+coefs <- coef(glm_fit, s = lambda_used)
+
+## matrix of the predictors and their coefficients
+coef_dense <- as.matrix(coefs)
+
+## Removes any predictors that had the value 0 for their coefficients and removes Intercept coefficient
+non_z_co <- coef_dense[coef_dense[,1] != 0 & rownames(coef_dense) != "(Intercept)", , drop = FALSE]
+
+## Putting it into a dataframe
+coef_df <- data.frame(predictor = rownames(non_z_co),
+                      coefficient = non_z_co[,1])
+
+predic_vals <- predict(final_fit, clean_data)$.pred
+```
+
 
 # Introduction
 
@@ -59,12 +210,58 @@ From these findings we were able to tell that the predictive model performed wel
 
 Lastly, to identify the most influential predictors, I isolated the predictors and their coefficients. Filtered out the ones that were dropped to zero, and ordered the ones that were leftover by their magnitude. This is because there were predictors that were associated with changes in achieving higher or lower gross. Though we want to know which predictors are the most influential in predicting higher-gross, it was interesting to see the ones that had a negative influence (like having an "unknown" rating). The elastic net model went reduce the original 53 predictors to 39. 14 were dropped to zero. The top three predictors that were the most influential for higher-gross were: votes, company frequency, and movies that were made in North America. 
 
+
 ### James: Tree Boosted/ Bagged Random
 The nominal variables were split into two classes and each was handled differently. For those with low cardinality, namely the release month, genre, rating all had < 15 unique columns.These columns were traditionally one hot encoded. For the rest I decided to forgo the binning initially used as to allow the trees more granularity on where to make the splits and use target encoding. This was because many of the categories like writer and director had cardinality in excess of 2500 and one hot encoding would make the feature space rather spares. Instead I used target encoding with a smoothing parameter to reduce overfitting concerns. This kept the data dense and hopefully imparted some meaning into the value used to represent it. It should help differentiate between people/companies who truly made high earning movies. 
 
 For the models themselves the random forest was tuned on the number of predictors per tree and the number of points required for a split. Tuning was done with bayesian optimization over 20 iterations. The boosted tree was similar except it was tuned on learning rate max depth and the number of points required to split it was trained using the same method. Overall the approach with these trees was to preserve as much data as possible and let them do their magic. Though our dataset isn’t massive it is large enough that CV should keep us from overfitting too badly. The importance of log transformation was also clear with the rmse converted back to real dollars was nearly twenty million lower. 
 
 The tree based methods achieved and rsq of .508 and a rmse of roughly 40 million in real dollars. Its important to not place too much importance on the rmse here though. By nature the biggest movies will dwarf all the others in terms of revenue which manifests as highly left skewed which has a large impact on the mean. Despite this rsme was used as the metric for two reasons. It is a standard for most regression problems due to its smooth characteristics and in an environment like movies theres far more theoretical upside to predicting the next big hit as opposed the next middle of the pack title. The direct result of that is an rmse that is highly influenced by the massive outliers at the top even after the log transformation which makes the number itself somewhat unreliable. Instead one can focus on the rsq which says that 50% variance is explained by our model. Its not amazing but for financial data rather respectable for an ensemble model. The reason I mention that ensemble models as a class in general is because the struggle with monotonic relationships seen in financial data. Its a reasonable expectation that spending more on a movie should increase revenue. This isn’t always the case but the general idea it better captured by linear modeling approaches. This is seen in the superior performance of the elastic net 
+
+## Figures
+
+
+
+The figure below is the actual versus the predicted plot of the elastic net model.
+We can see that it is more accurate in predicting higher gross films.
+```{r actual v predicted}
+
+act_pred <- ggplot(data = preds, mapping = aes(x = gross, y = .pred)) +
+  geom_point(alpha = 0.2) +
+  geom_abline(intercept = 0, slope = 1, color = "darkred") + 
+  labs(title = "Actual VS Predicted Gross",
+       x = "Actual Log Gross",
+       y = "Predicted Log Gross") 
+act_pred
+```
+
+
+The barplot below shows how influential each predictor was for films gross.
+This visual is useful for justifying our final claim that audience engagement and
+industry reputation are most important for high gross films. 
+
+```{r barplot predictors magnitude}
+
+coef_df <- coef_df |>
+  mutate(abs_coef = abs(coefficient)) |>
+  arrange(desc(abs_coef))
+
+top_coef <- coef_df |>
+  filter(rank(-abs_coef) <= 15)
+
+bar_pred <- ggplot(data = top_coef, aes(x = reorder(predictor, abs_coef), y = abs_coef, fill = coefficient > 0)) + 
+  geom_col() + 
+  coord_flip() + 
+  scale_fill_manual(values = c("darkred", "darkgreen"), labels = c("Negative", "Positive")) +
+  labs(title = "Predictor Importance",
+       x = "Predictor",
+       y = "Coefficient Magnitude",
+       fill = "Coefficient Sign")
+
+
+bar_pred
+```
+
 
 
 ## Conclusion/Changes if we did it again:
