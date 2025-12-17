@@ -270,7 +270,7 @@ Across all modeling approaches a consistent set of predictors were revealed as t
 
 Despite the different approaches we took, the models agreed on the most influential predictors. We can generalize the strongest predictors as: audience engagement and industry reputation. For real world application we could say that for films to be financially successful they should heavily advertise, cast popular actors, and have known directors direct the film. 
 
-If were to do this process again...
+If we were to do this process again...
 - Greater dataset 
 - better way to deal with budget(?)
 - ???
