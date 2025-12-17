@@ -92,11 +92,12 @@ lowest RMSE
 
 
 
+All the code for tuning/fitting the tree based models f can be found in Tree_Forest.Rmd 
+figures in the paper are also generated in this file and directly loaded into the paper to speed up knitting . 
+They are saved in a folder call TreePlots
+The full models are also saved for use in the slideshow in as binned_rf_results.rds and final_rf_results.rds in a folder called TreeModels 
+*note the final model is not final but the binned model
 
-
-
-
-Trees:
 
 
 

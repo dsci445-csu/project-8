@@ -306,7 +306,6 @@ ggplot(plot_data_binned, aes(x = avg_budget, y = bin_rmse)) +
   # Labels
   labs(
     title = "Does Money Bring Problems?",
-    subtitle = "RMSE (Error Variance) increases as Budget increases",
     x = "Average Budget (Log Scale)",
     y = "RMSE (Model Error)"
   ) +
@@ -321,22 +320,23 @@ saveRDS(final_fit_results, "final_rf_results.rds")
 ```{r}
 movies_fresh_2 <- movies_fresh %>% 
   count(director, name = "movie_count")
-ggplot(movies_fresh_2, aes(x = movie_count)) +
+directorHist <- ggplot(movies_fresh_2, aes(x = movie_count)) +
   geom_histogram(binwidth = 1, fill = "#2c3e50", color = "white") +
   
   # Log scale usually helps here because 90% of directors only made 1 movie
   
   labs(
     title = "Distribution of Director Activity",
-    subtitle = "Most directors have 1 movie. Look for the 'tail' to set your High/Low cutoff.",
     x = "Number of Movies Directed",
+  
     y = "Count of Directors (Log Scale)"
   ) +
   theme_minimal()
-
+directorHist
+saveRDS(directorHist, "TreePlots/DirectorHistogram.rds")
 
 ```
-Quick sanity check of with different encoding FIX VARIBLE NAMES 
+Quick sanity check of with different encoding 
 ```{r}
 # 1. Define the Cutoff
 cutoff <- 3
@@ -488,7 +488,6 @@ print(predicted_vs_actual_plot)
 ```
 ```{r}
 # 1. Calculate Global MAE (Mean Absolute Error)
-#    This tells you: "On average, the prediction is off by $X."
 mae_val <- final_predictions_dollars %>%
   metrics(truth = gross_dollars, estimate = pred_dollars) %>%
   filter(.metric == "mae") %>%
@@ -498,7 +497,6 @@ print(paste0("Global MAE: ", scales::dollar(mae_val)))
 
 
 # 2. Create the "RMSE vs. Gross" Plot (Binned Analysis)
-#    We split movies into 10 buckets (deciles) based on their actual revenue
 rmse_by_bin <- final_predictions_dollars %>%
   mutate(
     # Create 10 bins based on actual revenue
@@ -524,15 +522,14 @@ rmse_plot <- ggplot(rmse_by_bin, aes(x = avg_revenue, y = bin_rmse)) +
   scale_y_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
   
   labs(
-    title = "Does the Model Struggle with Blockbusters?",
-    subtitle = paste0("Global MAE: ", scales::dollar(mae_val), 
-                      " | Plot shows RMSE calculated for 10 distinct revenue buckets"),
-    x = "Median Revenue of Bin (Log Scale)",
-    y = "RMSE of Bin (Log Scale)"
+    subtitle = paste0("Global MAE: ", scales::dollar(mae_val)),
+    x = "Median Revenue ",
+    y = "RMSE "
   ) +
   theme_minimal()
 
-print(rmse_plot)
+rmse_plot
+saveRDS(rmse_plot, "TreePlots/rmse_by_budget.rds")
 ```
 ```{r}
 library(ggplot2)
