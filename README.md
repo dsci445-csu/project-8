@@ -54,7 +54,14 @@ Linear Regression:
 - Key significant predictors (example from our final model): votes, comp_freq, runtime, rating indicators, region indicators, and director_popularity.
 
 LASSO:
-
+- purpose was to see which variables impact the prediction the most
+- dummy coded the categorical variables 
+- run the data into a data frame matrix 
+- run a prediction lasso model, by pulling the coefficients and pulling out the minimum lambda
+- make a table with the data matrix to visualize the lasso results
+- reported the most impactful variables: movie stars, budget, and genre
+- square the mean of the residuals of the model- this gives us the rmse
+- this gave us an rmse of about $38 million
 
 Elastic Net:
 
