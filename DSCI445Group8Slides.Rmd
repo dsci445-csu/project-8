@@ -189,7 +189,7 @@ ggplot(plot_df, aes(x = Actual, y = Predicted)) +
   theme_minimal()
 ```
 
-```{r robin - code I need for the plots to work, include = FALSE, cache = TRUE}
+```{r robin - code I need for the plots to work, include = FALSE}
 clean_data <- read_csv("clean_movie_data.csv") 
 clean_data <- clean_data |>
   select(-c("X", "country", "director", "name", "writer", 
