@@ -223,7 +223,7 @@ dollar_rmse <- final_predictions_dollars %>%
   pull(.estimate)
 
 # 3. Generate the Plot with Coloring
-predicted_vs_actual_plot <- final_predictions_dollars %>%
+predicted_vs_actual_plot_v1 <- final_predictions_dollars %>%
   ggplot(aes(x = gross_dollars, y = pred_dollars, color = score)) + # <--- ADDED COLOR HERE
     
     # Points
@@ -248,7 +248,9 @@ predicted_vs_actual_plot <- final_predictions_dollars %>%
     coord_fixed() + 
     theme_minimal()
 
-print(predicted_vs_actual_plot)
+print(predicted_vs_actual_plot_v1)
+
+saveRDS(predicted_vs_actual_plot_v1, "TreePlots/initial_RF_pred_v_actual.rds")
 ```
 
 ```{r}
@@ -484,7 +486,8 @@ predicted_vs_actual_plot <- final_predictions_dollars %>%
     coord_fixed() + 
     theme_minimal()
 
-print(predicted_vs_actual_plot)
+predicted_vs_actual_plot
+saveRDS(predicted_vs_actual_plot, "TreePlots/predicted_vs_actual_plot.rds")
 ```
 ```{r}
 # 1. Calculate Global MAE (Mean Absolute Error)
@@ -553,21 +556,18 @@ p_resid <- ggplot(residual_data, aes(x = pred_dollars, y = resid_dollars)) +
   
   labs(
     title = "Residual Plot (Real Dollars)",
-    subtitle = "Are we consistently over/under predicting?",
     x = "Predicted Revenue (Log Scale)",
     y = "Residual (Actual - Predicted)"
   ) +
   theme_minimal()
 
-# 3. Normal Q-Q Plot
+
 #    Look for: Dots hugging the diagonal line.
-#    "Heavy Tails" (dots curving away at ends) means you have extreme outliers (huge hits or huge flops).
 p_qq <- ggplot(residual_data, aes(sample = resid_dollars)) +
   stat_qq(alpha = 0.5) +
   stat_qq_line(color = "red") +
   labs(
     title = "Normal Q-Q Plot",
-    subtitle = "Do the errors follow a Normal Distribution?",
     x = "Theoretical Quantiles",
     y = "Sample Quantiles"
   ) +
@@ -579,5 +579,32 @@ p_resid / p_qq
 ```
 ```{r}
 saveRDS(final_fit_results, "binned_rf_results.rds") 
+```
+
+```{r resid-plot, echo=FALSE, fig.width=10, fig.height=4.5, out.width="100%"}
+ggplot(combined_plot_data, aes(x = truth_dollars, y = pred_dollars)) +
+  
+  geom_point(alpha = 0.3, size = 1.5, color = "#2c3e50") +
+  
+  geom_abline(lty = 2, color = "#e74c3c", linewidth = 1) +
+  
+  facet_wrap(~Model) + 
+  
+  geom_text(
+    data = plot_labels,             
+    aes(x = x, y = y, label = label), 
+    inherit.aes = FALSE,           
+    size = 5
+  ) +
+  
+  scale_x_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  scale_y_log10(labels = label_dollar(scale_cut = cut_short_scale())) +
+  
+  # Labels
+  labs(
+    x = "Actual Revenue",
+    y = "Predicted Revenue",
+    title = "Predicted vs Actual Gross Revenue with Random Forest",
+  )
 ```
 
