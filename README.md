@@ -30,17 +30,30 @@ region. Purpose: to make dummy encoding smoother later on.
 count() function. Purpose: to make director and company useful in our 
 investigation by making it numerical data.
 
-::Add whatever you were in charge of for data cleaning::
+- Compute a title sentiment score using AFINN sentiment values, then adjust for punctuation (e.g., !, ?) so titles with strong punctuation reflect stronger tone.
+
+- Final variable used in modeling: sentiment_best
+  Purpose: adds a text-based feature to evaluate whether title tone is associated with revenue.
 
 
 Models:
 
 Linear Regression:
 
+- Response: gross modeled on the log scale using log(gross + 1)
+  Purpose: reduces right skew and limits extreme blockbuster influence.
+
+- Numeric predictors also log-transformed with log(x + 1) (examples: budget, votes, runtime, comp_freq, popularity measures).
+
+- Categorical predictors treated as factors (genre, rating, region, season).
+
+- Reported performance includes:
+  - $R^2$ on the log scale
+  - RMSE also converted back to dollars using exp($\hat{y}$) - 1
+
+- Key significant predictors (example from our final model): votes, comp_freq, runtime, rating indicators, region indicators, and director_popularity.
 
 LASSO:
-
-
 
 
 Elastic Net:
@@ -89,21 +102,11 @@ lowest RMSE
 - Using the fit from above, then predict so we can compare this to the OG data.
 
 
-
-
-
 All the code for tuning/fitting the tree based models f can be found in Tree_Forest.Rmd 
 figures in the paper are also generated in this file and directly loaded into the paper to speed up knitting . 
 They are saved in a folder call TreePlots
 The full models are also saved for use in the slideshow in as binned_rf_results.rds and final_rf_results.rds in a folder called TreeModels 
 *note the final model is not final but the binned model
-
-
-
-
-
-
-Figures:
 
 
 

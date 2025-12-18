@@ -9,7 +9,7 @@ output:
 
 ```{r setup, include=FALSE, message = FALSE}
 set.seed(445)
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(tidymodels)
 library(knitr)
@@ -17,7 +17,91 @@ library(kableExtra)
 library(dplyr)
 library(ggplot2)
 clean_data <- read_csv("clean_movie_data.csv")
-source("linreg.R")
+```
+
+```{r}
+library(tidyverse)
+
+library(tidymodels)
+
+clean_data <- read_csv("clean_movie_data.csv") 
+
+clean_data_lm <- clean_data |>
+  mutate(
+    gross = log(gross + 1),
+    budget = log(budget + 1),
+    votes  = log(votes + 1),
+    comp_freq = log(comp_freq + 1),
+    runtime = log(runtime + 1),
+    score= log(score + 1),
+    writer_popularity = log(writer_popularity + 1),
+    director_popularity = log(director_popularity + 1),
+    star_popularity = log(star_popularity + 1)
+  ) |>
+  
+  select(
+    gross,
+    budget, votes, runtime, score,
+    comp_freq, writer_popularity, director_popularity, star_popularity,
+    genre, rating, region, season,
+    sentiment_best
+  ) |>
+  mutate(
+    genre  = as.factor(genre),
+    rating = as.factor(rating),
+    region = as.factor(region),
+    season = as.factor(season)
+  ) |>
+
+  drop_na(gross)
+
+
+
+lm_full <- lm(gross ~ ., data = clean_data_lm)
+
+preds_log <- fitted(lm_full)
+preds_dollars <- exp(preds_log) - 1
+
+obs_log <- lm_full$model$gross
+obs_dollars <- exp(obs_log) - 1
+
+rmse_dollars <- sqrt(mean((obs_dollars - preds_dollars)^2))
+
+obs <- lm_full$model$gross
+preds <- fitted(lm_full)   
+rmse_lm <- sqrt(mean((obs- preds)^2))
+
+rsq_lm <- 1- sum((obs- preds)^2) / sum((obs- mean(obs))^2)
+
+sig_preds <- tidy(lm_full) %>%
+  filter(p.value < 0.05) %>%              
+  arrange(p.value)                        
+
+preds_log <- fitted(lm_full)
+preds_dollars <- exp(preds_log) - 1
+
+obs_log <- lm_full$model$gross
+obs_dollars <- exp(obs_log) - 1
+
+plot_df <- data.frame(
+  Actual = obs_dollars,
+  Predicted = preds_dollars
+)
+
+significant_table <- tidy(lm_full) %>%
+  filter(p.value < 0.05) %>%
+  mutate(
+    pct_impact = round((exp(estimate) - 1) * 100, 2),
+    p.value = signif(p.value, 3)
+  ) %>%
+  arrange(desc(abs(pct_impact))) %>%
+  select(
+    Predictor = term,
+    `Percent Impact on Gross` = pct_impact,
+    `p-value` = p.value) 
+
+top10_table <- significant_table %>%
+  slice(1:8)
 ```
 
 
@@ -105,7 +189,7 @@ ggplot(plot_df, aes(x = Actual, y = Predicted)) +
   theme_minimal()
 ```
 
-```{r robin - code I need for the plots to work, include = FALSE}
+```{r robin - code I need for the plots to work, include = FALSE, cache = TRUE}
 clean_data <- read_csv("clean_movie_data.csv") 
 clean_data <- clean_data |>
   select(-c("X", "country", "director", "name", "writer", 

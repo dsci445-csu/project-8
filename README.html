@@ -379,16 +379,39 @@ smoother later on.</p></li>
 <li><p>For director and company frequency encoding, we just add up the
 counts using count() function. Purpose: to make director and company
 useful in our investigation by making it numerical data.</p></li>
+<li><p>Compute a title sentiment score using AFINN sentiment values,
+then adjust for punctuation (e.g., !, ?) so titles with strong
+punctuation reflect stronger tone.</p></li>
+<li><p>Final variable used in modeling: sentiment_best Purpose: adds a
+text-based feature to evaluate whether title tone is associated with
+revenue.</p></li>
 </ul>
-<p>::Add whatever you were in charge of for data cleaning::</p>
 <p>Models:</p>
 <p>Linear Regression:</p>
+<ul>
+<li><p>Response: gross modeled on the log scale using log(gross + 1)
+Purpose: reduces right skew and limits extreme blockbuster
+influence.</p></li>
+<li><p>Numeric predictors also log-transformed with log(x + 1)
+(examples: budget, votes, runtime, comp_freq, popularity
+measures).</p></li>
+<li><p>Categorical predictors treated as factors (genre, rating, region,
+season).</p></li>
+<li><p>Reported performance includes:</p>
+<ul>
+<li><span class="math inline">\(R^2\)</span> on the log scale</li>
+<li>RMSE also converted back to dollars using exp(<span class="math inline">\(\hat{y}\)</span>) - 1</li>
+</ul></li>
+<li><p>Key significant predictors (example from our final model): votes,
+comp_freq, runtime, rating indicators, region indicators, and
+director_popularity.</p></li>
+</ul>
 <p>LASSO:</p>
 <p>Elastic Net:</p>
 <ul>
-<li>Log transform gross. Purpose: to ensure right skew is not
-overwhelming</li>
-<li>Build your elastic net recipe:</li>
+<li><p>Log transform gross. Purpose: to ensure right skew is not
+overwhelming</p></li>
+<li><p>Build your elastic net recipe:</p></li>
 </ul>
 <ol style="list-style-type: decimal">
 <li>Using step_mutate(), logp() transform all predictors. Purpose:
@@ -409,14 +432,32 @@ Purpose: to ensure all predictors are contributing equally toward the
 model.</li>
 </ol>
 <ul>
-<li>Define the elastic net model with the lambda and alpha parameters
-chosen by R using tune().</li>
-<li>Define a workflow that includes the recipe that was made above and
-the elastic net model made above. (need workflow and recipe
-packages)</li>
+<li><p>Define the elastic net model with the lambda and alpha parameters
+chosen by R using tune().</p></li>
+<li><p>Define a workflow that includes the recipe that was made above
+and the elastic net model made above. (need workflow and recipe
+packages)</p></li>
+<li><p>split data, using 10-fold cross-validation</p></li>
+<li><p>Make a grid for lambda and alpha</p></li>
+<li><p>Name the metrics you want in a variable</p></li>
+<li><p>Tuning of lambda and alpha using the workflow we defined
+above.</p></li>
+<li><p>Select the lowest RMSE and pull the lambda and the alpha that was
+associated with that output</p></li>
+<li><p>Define the final net model with the best parameters that were
+found with the lowest RMSE</p></li>
+<li><p>Fit the final model using the final net model from the previous
+step</p></li>
+<li><p>Using the fit from above, then predict so we can compare this to
+the OG data.</p></li>
 </ul>
-<p>Trees:</p>
-<p>Figures:</p>
+<p>All the code for tuning/fitting the tree based models f can be found
+in Tree_Forest.Rmd figures in the paper are also generated in this file
+and directly loaded into the paper to speed up knitting . They are saved
+in a folder call TreePlots The full models are also saved for use in the
+slideshow in as binned_rf_results.rds and final_rf_results.rds in a
+folder called TreeModels *note the final model is not final but the
+binned model</p>
 </div>
 
 
